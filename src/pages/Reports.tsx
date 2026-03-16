@@ -69,23 +69,19 @@ export default function ReportsPage() {
         query = query.eq("user_id", user.id);
       }
 
-      const promises: Promise<any>[] = [query];
-      if (isAdmin) {
-        promises.push(supabase.from("profiles").select("user_id, full_name, email"));
-      }
-      if (!isAdmin) {
-        promises.push(
-          supabase.from("correction_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false })
-        );
-      }
-
-      const results = await Promise.all(promises);
-      setAttendanceRecords(results[0].data || []);
+      const { data: records } = await query;
+      setAttendanceRecords(records || []);
 
       if (isAdmin) {
-        setProfiles(results[1]?.data || []);
+        const { data: profileData } = await supabase.from("profiles").select("user_id, full_name, email");
+        setProfiles(profileData || []);
       } else {
-        setRequests(results[1]?.data || []);
+        const { data: reqs } = await supabase
+          .from("correction_requests")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        setRequests(reqs || []);
       }
 
       setLoading(false);
