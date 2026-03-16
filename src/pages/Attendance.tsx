@@ -122,7 +122,10 @@ export default function AttendancePage() {
 
     const { error } = await supabase.from("attendance_records").insert(insert);
     if (error) {
-      toast({ title: "Failed to add", description: error.message, variant: "destructive" });
+      const msg = error.message.includes("duplicate") || error.code === "23505"
+        ? "An attendance record already exists for this employee on that date."
+        : error.message;
+      toast({ title: "Failed to add", description: msg, variant: "destructive" });
     } else {
       toast({ title: "Attendance added" });
       setAddOpen(false);
