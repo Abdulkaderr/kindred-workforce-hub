@@ -50,13 +50,14 @@ export default function EmployeesPage() {
 
   const fetchEmployees = async () => {
     const [profilesRes, rolesRes] = await Promise.all([
-      supabase.from("profiles").select("user_id, full_name, email"),
+      supabase.from("profiles").select("user_id, full_name, email, hourly_rate"),
       supabase.from("user_roles").select("user_id, role"),
     ]);
 
     const roles = new Map((rolesRes.data || []).map((r: any) => [r.user_id, r.role]));
     const merged = (profilesRes.data || []).map((p: any) => ({
       ...p,
+      hourly_rate: Number(p.hourly_rate) || 0,
       role: roles.get(p.user_id) || "employee",
     }));
 
