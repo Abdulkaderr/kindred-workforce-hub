@@ -13,24 +13,25 @@ import {
   User,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 
 interface NavItem {
-  title: string;
+  titleKey: string;
   url: string;
   icon: LucideIcon;
-  section?: string;
+  sectionKey?: string;
   adminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard, section: "Overview" },
-  { title: "Employees", url: "/employees", icon: Users, section: "Management", adminOnly: true },
-  { title: "Attendance", url: "/attendance", icon: Clock, section: "Management" },
-  { title: "Payroll", url: "/payroll", icon: DollarSign, section: "Management" },
-  { title: "Locations", url: "/locations", icon: MapPin, section: "Management", adminOnly: true },
-  { title: "Requests", url: "/requests", icon: ClipboardList, section: "Management" },
-  { title: "Reports", url: "/reports", icon: FileText, section: "Reports" },
-  { title: "Settings", url: "/settings", icon: Settings, section: "System" },
+  { titleKey: "nav.dashboard", url: "/", icon: LayoutDashboard, sectionKey: "nav.overview" },
+  { titleKey: "nav.employees", url: "/employees", icon: Users, sectionKey: "nav.management", adminOnly: true },
+  { titleKey: "nav.attendance", url: "/attendance", icon: Clock, sectionKey: "nav.management" },
+  { titleKey: "nav.payroll", url: "/payroll", icon: DollarSign, sectionKey: "nav.management" },
+  { titleKey: "nav.locations", url: "/locations", icon: MapPin, sectionKey: "nav.management", adminOnly: true },
+  { titleKey: "nav.requests", url: "/requests", icon: ClipboardList, sectionKey: "nav.management" },
+  { titleKey: "nav.reports", url: "/reports", icon: FileText, sectionKey: "nav.reports" },
+  { titleKey: "nav.settings", url: "/settings", icon: Settings, sectionKey: "nav.system" },
 ];
 
 interface AppSidebarProps {
@@ -40,11 +41,12 @@ interface AppSidebarProps {
 
 export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const { user, role, signOut } = useAuth();
+  const { t } = useTranslation();
 
   const filteredItems = navItems.filter(item => !item.adminOnly || role === "admin");
 
   const sections = filteredItems.reduce((acc, item) => {
-    const section = item.section || "Other";
+    const section = item.sectionKey || "Other";
     if (!acc[section]) acc[section] = [];
     acc[section].push(item);
     return acc;
@@ -67,11 +69,11 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2">
-        {Object.entries(sections).map(([section, items]) => (
-          <div key={section} className="mb-4">
+        {Object.entries(sections).map(([sectionKey, items]) => (
+          <div key={sectionKey} className="mb-4">
             {!collapsed && (
               <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-sidebar-muted">
-                {section}
+                {t(sectionKey)}
               </p>
             )}
             {items.map((item) => (
@@ -88,7 +90,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
                 }
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{item.title}</span>}
+                {!collapsed && <span>{t(item.titleKey)}</span>}
               </RouterNavLink>
             ))}
           </div>
@@ -115,7 +117,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
           }`}
         >
           <LogOut className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Sign Out</span>}
+          {!collapsed && <span>{t("nav.signOut")}</span>}
         </button>
       </div>
 

@@ -10,6 +10,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
 
 type AttendanceRecord = {
   id: string;
@@ -36,6 +37,7 @@ const statusMap: Record<string, string> = {
 };
 
 export default function AdminDashboard() {
+  const { t } = useTranslation();
   const [todayRecords, setTodayRecords] = useState<AttendanceRecord[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [totalEmployees, setTotalEmployees] = useState(0);
@@ -78,10 +80,10 @@ export default function AdminDashboard() {
 
   const formatAction = (status: string) => {
     switch (status) {
-      case "checked_in": return "Checked In";
-      case "on_break": return "On Break";
-      case "completed": return "Checked Out";
-      case "late": return "Late Check-In";
+      case "checked_in": return t("adminDashboard.checkedIn");
+      case "on_break": return t("adminDashboard.onBreakStatus");
+      case "completed": return t("adminDashboard.checkedOut");
+      case "late": return t("adminDashboard.lateCheckIn");
       default: return status;
     }
   };
@@ -90,8 +92,8 @@ export default function AdminDashboard() {
     <DashboardLayout>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Admin overview and live activity</p>
+          <h1 className="page-title">{t("adminDashboard.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{t("adminDashboard.subtitle")}</p>
         </div>
         <p className="mono text-muted-foreground">
           {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
@@ -99,38 +101,38 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatCard title="Total Employees" value={totalEmployees} icon={Users} variant="accent" />
-        <StatCard title="Active Today" value={activeToday} icon={UserCheck} variant="success" />
-        <StatCard title="Currently Working" value={currentlyWorking} icon={Clock} variant="accent" />
-        <StatCard title="On Break" value={onBreak} icon={Clock} variant="warning" />
+        <StatCard title={t("adminDashboard.totalEmployees")} value={totalEmployees} icon={Users} variant="accent" />
+        <StatCard title={t("adminDashboard.activeToday")} value={activeToday} icon={UserCheck} variant="success" />
+        <StatCard title={t("adminDashboard.currentlyWorking")} value={currentlyWorking} icon={Clock} variant="accent" />
+        <StatCard title={t("adminDashboard.onBreak")} value={onBreak} icon={Clock} variant="warning" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
-        <StatCard title="Late Today" value={lateToday} icon={AlertTriangle} variant="warning" />
-        <StatCard title="Absent Today" value={Math.max(0, absent)} icon={UserX} variant="default" />
-        <StatCard title="Finished Work" value={finished} icon={CheckCircle} variant="success" />
+        <StatCard title={t("adminDashboard.lateToday")} value={lateToday} icon={AlertTriangle} variant="warning" />
+        <StatCard title={t("adminDashboard.absentToday")} value={Math.max(0, absent)} icon={UserX} variant="default" />
+        <StatCard title={t("adminDashboard.finishedWork")} value={finished} icon={CheckCircle} variant="success" />
       </div>
 
       <div className="rounded-md border bg-card shadow-sm">
         <div className="flex items-center justify-between border-b px-5 py-3">
-          <h2 className="text-sm font-semibold">Live Activity Feed</h2>
+          <h2 className="text-sm font-semibold">{t("adminDashboard.liveActivity")}</h2>
           <span className="flex items-center gap-1.5 text-xs text-success font-medium">
             <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-            Live
+            {t("adminDashboard.live")}
           </span>
         </div>
         {loading ? (
-          <p className="px-5 py-6 text-sm text-muted-foreground text-center">Loading...</p>
+          <p className="px-5 py-6 text-sm text-muted-foreground text-center">{t("loading")}</p>
         ) : todayRecords.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-muted-foreground text-center">No activity today yet.</p>
+          <p className="px-5 py-6 text-sm text-muted-foreground text-center">{t("adminDashboard.noActivity")}</p>
         ) : (
           <table className="data-table">
             <thead>
               <tr>
-                <th>Employee</th>
-                <th>Action</th>
-                <th>Time</th>
-                <th>Status</th>
+                <th>{t("adminDashboard.employee")}</th>
+                <th>{t("adminDashboard.action")}</th>
+                <th>{t("adminDashboard.time")}</th>
+                <th>{t("adminDashboard.status")}</th>
               </tr>
             </thead>
             <tbody>

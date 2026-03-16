@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, Eye, EyeOff } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,8 +35,8 @@ export default function LoginPage() {
         });
         if (error) throw error;
         toast({
-          title: "Account created",
-          description: "Check your email to confirm your account.",
+          title: t("login.accountCreated"),
+          description: t("login.checkEmail"),
         });
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -46,7 +48,7 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t("login.error"),
         description: error.message,
         variant: "destructive",
       });
@@ -57,7 +59,6 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen">
-      {/* Left panel - branding */}
       <div className="hidden lg:flex lg:w-1/2 items-center justify-center bg-primary">
         <div className="max-w-md text-center px-8">
           <div className="flex items-center justify-center gap-3 mb-6">
@@ -67,12 +68,11 @@ export default function LoginPage() {
           </div>
           <h1 className="text-3xl font-bold text-primary-foreground mb-3">WorkforceOS</h1>
           <p className="text-primary-foreground/70 text-sm leading-relaxed">
-            Manage employee attendance, payroll, and workforce operations — all in one platform.
+            {t("login.brandDescription")}
           </p>
         </div>
       </div>
 
-      {/* Right panel - form */}
       <div className="flex w-full lg:w-1/2 items-center justify-center bg-background px-6">
         <div className="w-full max-w-sm space-y-6">
           <div className="lg:hidden flex items-center gap-2 justify-center mb-4">
@@ -82,17 +82,17 @@ export default function LoginPage() {
 
           <div className="text-center">
             <h2 className="text-2xl font-semibold text-foreground">
-              {isSignUp ? "Create an account" : "Welcome back"}
+              {isSignUp ? t("login.createAccount") : t("login.welcomeBack")}
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {isSignUp ? "Sign up to get started" : "Sign in to your account"}
+              {isSignUp ? t("login.signUpToStart") : t("login.signInToAccount")}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="fullName">{t("login.fullName")}</Label>
                 <Input
                   id="fullName"
                   type="text"
@@ -105,7 +105,7 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("login.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -117,7 +117,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("login.password")}</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -139,17 +139,17 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
+              {loading ? t("login.pleaseWait") : isSignUp ? t("login.createAccountBtn") : t("login.signIn")}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
-            {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+            {isSignUp ? t("login.alreadyHaveAccount") : t("login.dontHaveAccount")}{" "}
             <button
               onClick={() => setIsSignUp(!isSignUp)}
               className="font-medium text-primary hover:underline"
             >
-              {isSignUp ? "Sign in" : "Sign up"}
+              {isSignUp ? t("login.signInLink") : t("login.signUpLink")}
             </button>
           </p>
         </div>
