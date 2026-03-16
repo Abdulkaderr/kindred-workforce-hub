@@ -217,6 +217,7 @@ export default function EmployeesPage() {
               <tr>
                 <th>Name</th>
                 <th>Email</th>
+                <th>Rate</th>
                 <th>Role</th>
                 {isAdmin && <th>Actions</th>}
               </tr>
