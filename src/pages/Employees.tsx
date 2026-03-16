@@ -227,6 +227,7 @@ export default function EmployeesPage() {
                 <tr key={e.user_id}>
                   <td className="font-medium">{e.full_name || "—"}</td>
                   <td className="text-muted-foreground">{e.email || "—"}</td>
+                  <td className="mono">${e.hourly_rate}/hr</td>
                   <td>
                     <span className={`status-badge ${e.role === "admin" ? "status-active" : "status-completed"}`}>
                       {e.role.charAt(0).toUpperCase() + e.role.slice(1)}
