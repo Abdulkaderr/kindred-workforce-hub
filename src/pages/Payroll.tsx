@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { StatCard } from "@/components/StatCard";
 import { DollarSign, CheckCircle, Clock, AlertTriangle } from "lucide-react";
@@ -28,25 +28,32 @@ type PayrollRow = {
   paid: number;
   remaining: number;
   status: "Paid" | "Partial" | "Pending";
-  payrollId: string | null; // existing payroll_records id
+  payrollId: string | null;
 };
 
 type Period = "weekly" | "monthly" | "yearly";
 
 const periodLabels: Record<Period, string> = { weekly: "Weekly", monthly: "Monthly", yearly: "Yearly" };
 
+/** Returns a fixed calendar period range based on current date */
 function getPeriodRange(period: Period): { start: string; end: string } {
   const now = new Date();
-  const end = now.toISOString().split("T")[0];
-  let from: Date;
-  if (period === "weekly") {
-    from = new Date(now); from.setDate(now.getDate() - 7);
-  } else if (period === "monthly") {
-    from = new Date(now); from.setMonth(now.getMonth() - 1);
+  if (period === "monthly") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { start: start.toISOString().split("T")[0], end: end.toISOString().split("T")[0] };
+  } else if (period === "weekly") {
+    const day = now.getDay();
+    const start = new Date(now);
+    start.setDate(now.getDate() - day); // Sunday
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6); // Saturday
+    return { start: start.toISOString().split("T")[0], end: end.toISOString().split("T")[0] };
   } else {
-    from = new Date(now); from.setFullYear(now.getFullYear() - 1);
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end = new Date(now.getFullYear(), 11, 31);
+    return { start: start.toISOString().split("T")[0], end: end.toISOString().split("T")[0] };
   }
-  return { start: from.toISOString().split("T")[0], end };
 }
 
 export default function PayrollPage() {
@@ -62,19 +69,20 @@ export default function PayrollPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
 
+  const { start, end } = getPeriodRange(period);
+
   const fetchData = async () => {
     if (!user) return;
     setLoading(true);
-    const { start, end } = getPeriodRange(period);
 
-    // Fetch attendance, profiles, and existing payroll records in parallel
+    // Fetch attendance, profiles, and payroll records filtered by period date range
     const attendanceQuery = isAdmin
       ? supabase.from("attendance_records").select("*").gte("date", start).lte("date", end)
       : supabase.from("attendance_records").select("*").eq("user_id", user.id).gte("date", start).lte("date", end);
 
     const payrollQuery = isAdmin
-      ? supabase.from("payroll_records").select("*").eq("period_type", period)
-      : supabase.from("payroll_records").select("*").eq("user_id", user.id).eq("period_type", period);
+      ? supabase.from("payroll_records").select("*").gte("period_start", start).lte("period_end", end)
+      : supabase.from("payroll_records").select("*").eq("user_id", user.id).gte("period_start", start).lte("period_end", end);
 
     const [attendanceRes, profilesRes, payrollRes] = await Promise.all([
       attendanceQuery,
@@ -97,16 +105,15 @@ export default function PayrollPage() {
       hoursByUser[r.user_id] = (hoursByUser[r.user_id] || 0) + hours;
     });
 
-    // Map payroll records by user_id for quick lookup
+    // Map payroll records by user_id — use most recent per user for this period
     const payrollByUser: Record<string, any> = {};
     payrollRecords.forEach((pr: any) => {
-      // Use most recent record per user
       if (!payrollByUser[pr.user_id] || pr.created_at > payrollByUser[pr.user_id].created_at) {
         payrollByUser[pr.user_id] = pr;
       }
     });
 
-    // Build rows from profiles that have attendance or payroll data
+    // Build rows
     const userIds = new Set([...Object.keys(hoursByUser), ...Object.keys(payrollByUser)]);
     const profileMap = new Map(profiles.map((p) => [p.user_id, p]));
 
@@ -117,6 +124,7 @@ export default function PayrollPage() {
       const totalHours = Math.round((hoursByUser[uid] || 0) * 10) / 10;
       const totalSalary = Math.round(rate * totalHours * 100) / 100;
       const pr = payrollByUser[uid];
+      // Always preserve existing paid amount — never overwrite
       const paid = pr ? Number(pr.paid_amount) : 0;
       const remaining = Math.max(0, totalSalary - paid);
       const status: PayrollRow["status"] = remaining <= 0 && totalSalary > 0 ? "Paid" : paid > 0 ? "Partial" : "Pending";
@@ -160,13 +168,12 @@ export default function PayrollPage() {
     const amount = Number(paymentAmount);
     if (amount <= 0) return;
 
-    const { start, end } = getPeriodRange(period);
     const newPaid = selectedRow.paid + amount;
     const newRemaining = Math.max(0, selectedRow.totalSalary - newPaid);
     const newStatus = newRemaining <= 0 ? "paid" : "partial";
 
     if (selectedRow.payrollId) {
-      // Update existing record
+      // Update existing record — only update paid_amount and recalculated fields
       const { error } = await supabase
         .from("payroll_records")
         .update({
@@ -183,7 +190,7 @@ export default function PayrollPage() {
         return;
       }
     } else {
-      // Create new payroll record
+      // Create new payroll record with the payment
       const { error } = await supabase.from("payroll_records").insert({
         user_id: selectedRow.user_id,
         period_type: period,
@@ -208,8 +215,6 @@ export default function PayrollPage() {
   };
 
   const handleGeneratePayroll = async () => {
-    const { start, end } = getPeriodRange(period);
-
     // Get attendance records for all employees in period
     const { data: attendance } = await supabase
       .from("attendance_records")
@@ -226,6 +231,20 @@ export default function PayrollPage() {
     const { data: profiles } = await supabase.from("profiles").select("user_id, hourly_rate");
     const rateMap = new Map((profiles || []).map((p: any) => [p.user_id, Number(p.hourly_rate) || 0]));
 
+    // Get existing payroll records for this period to preserve payments
+    const { data: existingPayroll } = await supabase
+      .from("payroll_records")
+      .select("*")
+      .gte("period_start", start)
+      .lte("period_end", end);
+
+    const existingByUser: Record<string, any> = {};
+    (existingPayroll || []).forEach((pr: any) => {
+      if (!existingByUser[pr.user_id] || pr.created_at > existingByUser[pr.user_id].created_at) {
+        existingByUser[pr.user_id] = pr;
+      }
+    });
+
     // Calculate hours per user
     const hoursByUser: Record<string, number> = {};
     attendance.forEach((r: any) => {
@@ -235,27 +254,65 @@ export default function PayrollPage() {
       hoursByUser[r.user_id] = (hoursByUser[r.user_id] || 0) + hours;
     });
 
-    const inserts = Object.entries(hoursByUser).map(([userId, hours]) => {
+    const inserts: any[] = [];
+    const updates: { id: string; data: any }[] = [];
+
+    Object.entries(hoursByUser).forEach(([userId, hours]) => {
       const rate = rateMap.get(userId) || 0;
       const totalHours = Math.round(hours * 10) / 10;
-      return {
-        user_id: userId,
-        period_type: period,
-        period_start: start,
-        period_end: end,
-        total_hours: totalHours,
-        hourly_rate: rate,
-        total_salary: Math.round(totalHours * rate * 100) / 100,
-        paid_amount: 0,
-        status: "pending",
-      };
+      const totalSalary = Math.round(totalHours * rate * 100) / 100;
+      const existing = existingByUser[userId];
+
+      if (existing) {
+        // Update hours/salary but PRESERVE paid_amount
+        const paidAmount = Number(existing.paid_amount) || 0;
+        const remaining = Math.max(0, totalSalary - paidAmount);
+        const status = remaining <= 0 && totalSalary > 0 ? "paid" : paidAmount > 0 ? "partial" : "pending";
+        updates.push({
+          id: existing.id,
+          data: {
+            total_hours: totalHours,
+            hourly_rate: rate,
+            total_salary: totalSalary,
+            status,
+          },
+        });
+      } else {
+        inserts.push({
+          user_id: userId,
+          period_type: period,
+          period_start: start,
+          period_end: end,
+          total_hours: totalHours,
+          hourly_rate: rate,
+          total_salary: totalSalary,
+          paid_amount: 0,
+          status: "pending",
+        });
+      }
     });
 
-    const { error } = await supabase.from("payroll_records").insert(inserts);
-    if (error) {
-      toast({ title: "Failed to generate payroll", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Payroll generated", description: `${inserts.length} payroll records created.` });
+    let hasError = false;
+
+    if (inserts.length > 0) {
+      const { error } = await supabase.from("payroll_records").insert(inserts);
+      if (error) {
+        toast({ title: "Failed to generate payroll", description: error.message, variant: "destructive" });
+        hasError = true;
+      }
+    }
+
+    for (const upd of updates) {
+      const { error } = await supabase.from("payroll_records").update(upd.data).eq("id", upd.id);
+      if (error) {
+        toast({ title: "Failed to update payroll", description: error.message, variant: "destructive" });
+        hasError = true;
+        break;
+      }
+    }
+
+    if (!hasError) {
+      toast({ title: "Payroll generated", description: `${inserts.length} created, ${updates.length} updated (payments preserved).` });
       fetchData();
     }
   };
@@ -265,7 +322,9 @@ export default function PayrollPage() {
       <div className="page-header flex-wrap gap-3">
         <div>
           <h1 className="page-title">Payroll</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{periodLabels[period]} payroll management</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {periodLabels[period]} payroll — {start} to {end}
+          </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
@@ -292,7 +351,7 @@ export default function PayrollPage() {
           <p className="px-5 py-6 text-sm text-muted-foreground text-center">Loading...</p>
         ) : rows.length === 0 ? (
           <p className="px-5 py-6 text-sm text-muted-foreground text-center">
-            No payroll data. {isAdmin ? "Click 'Generate Payroll' to create records from attendance data." : ""}
+            No payroll data for this period. {isAdmin ? "Click 'Generate Payroll' to create records from attendance data." : ""}
           </p>
         ) : (
           <table className="data-table">
@@ -314,7 +373,7 @@ export default function PayrollPage() {
                 <tr key={r.user_id}>
                   <td className="font-medium">{r.name}</td>
                   <td className="mono">${r.rate}/hr</td>
-                  <td className="mono text-xs">{getPeriodRange(period).start} → {getPeriodRange(period).end}</td>
+                  <td className="mono text-xs">{start} → {end}</td>
                   <td className="mono">{r.totalHours.toFixed(1)}</td>
                   <td className="mono font-medium">${r.totalSalary.toLocaleString()}</td>
                   <td className="mono text-success">${r.paid.toLocaleString()}</td>

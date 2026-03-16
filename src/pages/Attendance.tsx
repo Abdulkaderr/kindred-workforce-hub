@@ -51,6 +51,16 @@ function getPeriodRange(period: Period): { from: string; to: string } {
   return { from: from.toISOString().split("T")[0], to };
 }
 
+/** Validate that check-out is after check-in. Returns error message or null. */
+function validateTimes(checkIn: string, checkOut: string): string | null {
+  if (!checkIn || !checkOut) return null;
+  const inTime = new Date(checkIn).getTime();
+  const outTime = new Date(checkOut).getTime();
+  if (isNaN(inTime) || isNaN(outTime)) return "Invalid date/time values.";
+  if (outTime <= inTime) return "Check-out time must be after check-in time.";
+  return null;
+}
+
 export default function AttendancePage() {
   const { role, user } = useAuth();
   const isAdmin = role === "admin";
@@ -111,6 +121,18 @@ export default function AttendancePage() {
       toast({ title: "Select an employee", variant: "destructive" });
       return;
     }
+
+    // Validate times if both provided
+    if (addCheckIn && addCheckOut) {
+      const checkInISO = new Date(`${addDate}T${addCheckIn}`).toISOString();
+      const checkOutISO = new Date(`${addDate}T${addCheckOut}`).toISOString();
+      const timeError = validateTimes(checkInISO, checkOutISO);
+      if (timeError) {
+        toast({ title: "Invalid times", description: timeError, variant: "destructive" });
+        return;
+      }
+    }
+
     const insert: any = {
       user_id: addUserId,
       date: addDate,
@@ -171,6 +193,15 @@ export default function AttendancePage() {
   const cancelEdit = () => setEditingId(null);
 
   const saveEdit = async (recordId: string) => {
+    // Validate times
+    if (editCheckIn && editCheckOut) {
+      const timeError = validateTimes(new Date(editCheckIn).toISOString(), new Date(editCheckOut).toISOString());
+      if (timeError) {
+        toast({ title: "Invalid times", description: timeError, variant: "destructive" });
+        return;
+      }
+    }
+
     const update: any = {
       status: editStatus,
     };
