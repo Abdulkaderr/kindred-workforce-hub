@@ -3,11 +3,17 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Users, Clock, DollarSign, CalendarDays, CheckCircle } from "lucide-react";
+import { Download, Users, Clock, CalendarDays, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
 type Period = "weekly" | "monthly" | "yearly";
+
+type Profile = {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+};
 
 const periodLabels = { weekly: "Weekly", monthly: "Monthly", yearly: "Yearly" };
 
@@ -26,14 +32,11 @@ function getPeriodRange(period: Period): { from: string; to: string } {
   const to = now.toISOString().split("T")[0];
   let from: Date;
   if (period === "weekly") {
-    from = new Date(now);
-    from.setDate(now.getDate() - 7);
+    from = new Date(now); from.setDate(now.getDate() - 7);
   } else if (period === "monthly") {
-    from = new Date(now);
-    from.setMonth(now.getMonth() - 1);
+    from = new Date(now); from.setMonth(now.getMonth() - 1);
   } else {
-    from = new Date(now);
-    from.setFullYear(now.getFullYear() - 1);
+    from = new Date(now); from.setFullYear(now.getFullYear() - 1);
   }
   return { from: from.toISOString().split("T")[0], to };
 }
@@ -44,6 +47,7 @@ export default function ReportsPage() {
   const [period, setPeriod] = useState<Period>("monthly");
   const [requests, setRequests] = useState<any[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Employee";
@@ -54,7 +58,6 @@ export default function ReportsPage() {
     setLoading(true);
 
     const fetchData = async () => {
-      // Fetch attendance records
       let query = supabase
         .from("attendance_records")
         .select("*")
@@ -66,17 +69,23 @@ export default function ReportsPage() {
         query = query.eq("user_id", user.id);
       }
 
-      const { data: records } = await query;
-      setAttendanceRecords(records || []);
-
-      // Fetch correction requests for employee
+      const promises: Promise<any>[] = [query];
+      if (isAdmin) {
+        promises.push(supabase.from("profiles").select("user_id, full_name, email"));
+      }
       if (!isAdmin) {
-        const { data: reqs } = await supabase
-          .from("correction_requests")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-        setRequests(reqs || []);
+        promises.push(
+          supabase.from("correction_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false })
+        );
+      }
+
+      const results = await Promise.all(promises);
+      setAttendanceRecords(results[0].data || []);
+
+      if (isAdmin) {
+        setProfiles(results[1]?.data || []);
+      } else {
+        setRequests(results[1]?.data || []);
       }
 
       setLoading(false);
@@ -85,7 +94,11 @@ export default function ReportsPage() {
     fetchData();
   }, [user, period, isAdmin]);
 
-  // Helper: compute hours between check_in and check_out
+  const getName = (userId: string) => {
+    const p = profiles.find((p) => p.user_id === userId);
+    return p?.full_name || p?.email?.split("@")[0] || userId.slice(0, 8) + "...";
+  };
+
   const computeHours = (record: any): number => {
     if (!record.check_in_time || !record.check_out_time) return 0;
     const diff = new Date(record.check_out_time).getTime() - new Date(record.check_in_time).getTime();
@@ -94,8 +107,6 @@ export default function ReportsPage() {
   };
 
   if (isAdmin) {
-    // ─── ADMIN VIEW ───
-    // Group records by user
     const byUser: Record<string, any[]> = {};
     attendanceRecords.forEach((r) => {
       if (!byUser[r.user_id]) byUser[r.user_id] = [];
@@ -107,6 +118,7 @@ export default function ReportsPage() {
       const totalHours = records.reduce((sum, r) => sum + computeHours(r), 0);
       return {
         userId,
+        name: getName(userId),
         daysWorked,
         totalHours: totalHours.toFixed(1),
         avgHours: daysWorked > 0 ? (totalHours / daysWorked).toFixed(1) : "0.0",
@@ -117,18 +129,17 @@ export default function ReportsPage() {
     const totalHoursWorked = userSummaries.reduce((s, u) => s + parseFloat(u.totalHours), 0);
     const totalDaysWorked = userSummaries.reduce((s, u) => s + u.daysWorked, 0);
 
-    // Recent activity from today's records
     const today = new Date().toISOString().split("T")[0];
     const todayRecords = attendanceRecords.filter((r) => r.date === today);
 
     return (
       <DashboardLayout>
-        <div className="page-header">
+        <div className="page-header flex-wrap gap-3">
           <div>
             <h1 className="page-title">Reports</h1>
             <p className="text-sm text-muted-foreground mt-0.5">{periodLabels[period]} attendance reports</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
               <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -149,8 +160,7 @@ export default function ReportsPage() {
           <StatCard title="Avg Hours/Employee" value={totalEmployees > 0 ? (totalHoursWorked / totalEmployees).toFixed(1) : "0"} icon={Clock} variant="warning" />
         </div>
 
-        {/* Attendance Summary */}
-        <div className="rounded-md border bg-card shadow-sm mb-6">
+        <div className="rounded-md border bg-card shadow-sm mb-6 overflow-x-auto">
           <div className="flex items-center justify-between border-b px-5 py-3">
             <h2 className="text-sm font-semibold flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> Attendance Summary — {periodLabels[period]}</h2>
           </div>
@@ -160,11 +170,11 @@ export default function ReportsPage() {
             <p className="px-5 py-6 text-sm text-muted-foreground text-center">No attendance data for this period.</p>
           ) : (
             <table className="data-table">
-              <thead><tr><th>User ID</th><th>Days Worked</th><th>Total Hours</th><th>Avg Hours/Day</th></tr></thead>
+              <thead><tr><th>Employee</th><th>Days Worked</th><th>Total Hours</th><th>Avg Hours/Day</th></tr></thead>
               <tbody>
                 {userSummaries.map((u) => (
                   <tr key={u.userId}>
-                    <td className="font-medium text-xs">{u.userId.slice(0, 8)}...</td>
+                    <td className="font-medium">{u.name}</td>
                     <td className="mono">{u.daysWorked}</td>
                     <td className="mono">{u.totalHours}</td>
                     <td className="mono">{u.avgHours}</td>
@@ -175,8 +185,7 @@ export default function ReportsPage() {
           )}
         </div>
 
-        {/* Today's Activity */}
-        <div className="rounded-md border bg-card shadow-sm">
+        <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
           <div className="flex items-center justify-between border-b px-5 py-3">
             <h2 className="text-sm font-semibold flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Today's Activity</h2>
           </div>
@@ -184,11 +193,11 @@ export default function ReportsPage() {
             <p className="px-5 py-6 text-sm text-muted-foreground text-center">No activity today.</p>
           ) : (
             <table className="data-table">
-              <thead><tr><th>User</th><th>Check In</th><th>Check Out</th><th>Status</th></tr></thead>
+              <thead><tr><th>Employee</th><th>Check In</th><th>Check Out</th><th>Status</th></tr></thead>
               <tbody>
                 {todayRecords.map((r) => (
                   <tr key={r.id}>
-                    <td className="font-medium text-xs">{r.user_id.slice(0, 8)}...</td>
+                    <td className="font-medium">{getName(r.user_id)}</td>
                     <td className="mono">{r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}</td>
                     <td className="mono">{r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}</td>
                     <td><span className={`status-badge ${statusMap[r.status] || "status-pending"}`}>{r.status.charAt(0).toUpperCase() + r.status.slice(1).replace(/_/g, " ")}</span></td>
@@ -210,7 +219,7 @@ export default function ReportsPage() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-2xl w-full space-y-6 py-2">
-        <div className="page-header">
+        <div className="page-header flex-wrap gap-3">
           <div>
             <h1 className="page-title">My Reports</h1>
             <p className="text-sm text-muted-foreground mt-0.5">{periodLabels[period]} summary for {displayName}</p>
@@ -225,7 +234,6 @@ export default function ReportsPage() {
           </Select>
         </div>
 
-        {/* Personal Stats */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard title="Days Worked" value={daysWorked} icon={CalendarDays} variant="accent" />
           <StatCard title="Total Hours" value={totalHours.toFixed(1)} icon={Clock} variant="default" />
@@ -233,8 +241,7 @@ export default function ReportsPage() {
           <StatCard title="Records" value={attendanceRecords.length} icon={Users} variant="default" />
         </div>
 
-        {/* Recent Attendance History */}
-        <div className="rounded-md border bg-card shadow-sm">
+        <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
           <div className="border-b px-5 py-3">
             <h2 className="text-sm font-semibold flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" /> Recent Attendance
@@ -265,8 +272,7 @@ export default function ReportsPage() {
           )}
         </div>
 
-        {/* Correction Requests History */}
-        <div className="rounded-md border bg-card shadow-sm">
+        <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
           <div className="border-b px-5 py-3">
             <h2 className="text-sm font-semibold flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-muted-foreground" /> My Correction Requests
