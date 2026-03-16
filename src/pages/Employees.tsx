@@ -127,14 +127,12 @@ export default function EmployeesPage() {
   const handleDeleteEmployee = async (emp: EmployeeRow) => {
     if (!confirm(`Are you sure you want to remove ${emp.full_name || emp.email}?`)) return;
 
-    // Delete from profiles and user_roles (cascade won't work from client for auth.users)
-    const [r1, r2] = await Promise.all([
-      supabase.from("profiles").delete().eq("user_id", emp.user_id),
-      supabase.from("user_roles").delete().eq("user_id", emp.user_id),
-    ]);
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: { action: "delete_user", user_id: emp.user_id },
+    });
 
-    if (r1.error || r2.error) {
-      toast({ title: "Delete failed", description: r1.error?.message || r2.error?.message, variant: "destructive" });
+    if (error || data?.error) {
+      toast({ title: "Delete failed", description: data?.error || error?.message, variant: "destructive" });
     } else {
       toast({ title: "Employee removed" });
       fetchEmployees();
