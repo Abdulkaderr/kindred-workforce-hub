@@ -29,7 +29,7 @@ const navItems: NavItem[] = [
   { title: "Payroll", url: "/payroll", icon: DollarSign, section: "Management", adminOnly: true },
   { title: "Locations", url: "/locations", icon: MapPin, section: "Management", adminOnly: true },
   { title: "Requests", url: "/requests", icon: ClipboardList, section: "Management", adminOnly: true },
-  { title: "Reports", url: "/reports", icon: FileText, section: "Reports", adminOnly: true },
+  { title: "Reports", url: "/reports", icon: FileText, section: "Reports" },
   { title: "Settings", url: "/settings", icon: Settings, section: "System" },
 ];
 
