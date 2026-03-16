@@ -204,6 +204,40 @@ export default function ReportsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Activity Log */}
+      <div className="rounded-md border bg-card shadow-sm mt-6">
+        <div className="flex items-center justify-between border-b px-5 py-3">
+          <h2 className="text-sm font-semibold flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            Recent Activity Log
+          </h2>
+        </div>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Action</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentActivity.map((item, i) => (
+              <tr key={i}>
+                <td className="font-medium">{item.employee}</td>
+                <td>{item.action}</td>
+                <td className="mono">{item.time}</td>
+                <td>
+                  <span className={`status-badge ${statusMap[item.status]}`}>
+                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </DashboardLayout>
   );
 }
