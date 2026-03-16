@@ -23,9 +23,11 @@ import {
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const displayName =
     user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Employee";
 
@@ -37,7 +39,6 @@ export default function EmployeeDashboard() {
   const [totalBreakMs, setTotalBreakMs] = useState(0);
   const [recordId, setRecordId] = useState<string | null>(null);
 
-  // Correction request state
   const [reqDate, setReqDate] = useState("");
   const [reqType, setReqType] = useState("");
   const [reqNote, setReqNote] = useState("");
@@ -50,7 +51,6 @@ export default function EmployeeDashboard() {
       hour12: true,
     });
 
-  // Load today's record on mount
   useEffect(() => {
     if (!user) return;
     const today = new Date().toISOString().split("T")[0];
@@ -113,7 +113,7 @@ export default function EmployeeDashboard() {
       .single();
 
     if (error) {
-      toast({ title: "Check-in failed", description: error.message, variant: "destructive" });
+      toast({ title: t("employeeDashboard.checkInFailed"), description: error.message, variant: "destructive" });
     } else if (data) {
       setRecordId(data.id);
     }
@@ -139,7 +139,7 @@ export default function EmployeeDashboard() {
         .eq("id", recordId);
 
       if (error) {
-        toast({ title: "Check-out failed", description: error.message, variant: "destructive" });
+        toast({ title: t("employeeDashboard.checkOutFailed"), description: error.message, variant: "destructive" });
       }
     }
   };
@@ -178,7 +178,7 @@ export default function EmployeeDashboard() {
 
   const handleSubmitRequest = async () => {
     if (!reqDate || !reqType) {
-      toast({ title: "Please fill in the date and request type", variant: "destructive" });
+      toast({ title: t("employeeDashboard.fillDateAndType"), variant: "destructive" });
       return;
     }
     setSubmitting(true);
@@ -190,9 +190,9 @@ export default function EmployeeDashboard() {
     });
     setSubmitting(false);
     if (error) {
-      toast({ title: "Failed to submit request", description: error.message, variant: "destructive" });
+      toast({ title: t("employeeDashboard.requestFailed"), description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Request submitted", description: "Your admin will review it shortly." });
+      toast({ title: t("employeeDashboard.requestSubmitted"), description: t("employeeDashboard.requestSubmittedDesc") });
       setReqDate("");
       setReqType("");
       setReqNote("");
@@ -202,10 +202,9 @@ export default function EmployeeDashboard() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-md w-full space-y-6 py-2">
-        {/* Greeting */}
         <div className="text-center">
           <h1 className="text-xl font-semibold text-foreground">
-            Hello, {displayName} 👋
+            {t("employeeDashboard.hello", { name: displayName })}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {new Date().toLocaleDateString("en-US", {
@@ -216,22 +215,21 @@ export default function EmployeeDashboard() {
           </p>
         </div>
 
-        {/* Today Status */}
         <div className="rounded-xl border bg-card p-4 shadow-sm space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5" /> Today's Status
+            <Clock className="h-3.5 w-3.5" /> {t("employeeDashboard.todayStatus")}
           </h2>
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="rounded-lg bg-muted/50 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Check In</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("employeeDashboard.checkIn")}</p>
               <p className="mt-1 text-sm font-semibold text-foreground mono">{checkInTime || "—"}</p>
             </div>
             <div className="rounded-lg bg-muted/50 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Check Out</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("employeeDashboard.checkOut")}</p>
               <p className="mt-1 text-sm font-semibold text-foreground mono">{checkOutTime || "—"}</p>
             </div>
             <div className="rounded-lg bg-muted/50 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Break</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("employeeDashboard.break")}</p>
               <p className="mt-1 text-sm font-semibold text-foreground mono">
                 {totalBreakMs > 0 || onBreak
                   ? formatBreak(totalBreakMs + (onBreak && breakStart ? Date.now() - breakStart : 0))
@@ -241,69 +239,66 @@ export default function EmployeeDashboard() {
           </div>
         </div>
 
-        {/* Attendance Action Buttons */}
         <div className="grid grid-cols-2 gap-3">
           <button onClick={handleCheckIn} disabled={checkedIn}
             className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-primary/20 bg-primary/5 p-6 transition-all hover:bg-primary/10 hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95">
             <div className="rounded-full bg-primary p-3"><LogIn className="h-6 w-6 text-primary-foreground" /></div>
-            <span className="text-sm font-semibold text-foreground">Check In</span>
+            <span className="text-sm font-semibold text-foreground">{t("employeeDashboard.checkIn")}</span>
           </button>
           <button onClick={handleCheckOut} disabled={!checkedIn}
             className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-destructive/20 bg-destructive/5 p-6 transition-all hover:bg-destructive/10 hover:border-destructive/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95">
             <div className="rounded-full bg-destructive p-3"><LogOut className="h-6 w-6 text-destructive-foreground" /></div>
-            <span className="text-sm font-semibold text-foreground">Check Out</span>
+            <span className="text-sm font-semibold text-foreground">{t("employeeDashboard.checkOut")}</span>
           </button>
           <button onClick={handleBreakToggle} disabled={!checkedIn || onBreak}
             className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-warning/20 bg-warning/5 p-6 transition-all hover:bg-warning/10 hover:border-warning/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95">
             <div className="rounded-full bg-warning p-3"><Coffee className="h-6 w-6 text-warning-foreground" /></div>
-            <span className="text-sm font-semibold text-foreground">Start Break</span>
+            <span className="text-sm font-semibold text-foreground">{t("employeeDashboard.startBreak")}</span>
           </button>
           <button onClick={handleBreakToggle} disabled={!onBreak}
             className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-success/20 bg-success/5 p-6 transition-all hover:bg-success/10 hover:border-success/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95">
             <div className="rounded-full bg-success p-3"><Timer className="h-6 w-6 text-success-foreground" /></div>
-            <span className="text-sm font-semibold text-foreground">End Break</span>
+            <span className="text-sm font-semibold text-foreground">{t("employeeDashboard.endBreak")}</span>
           </button>
         </div>
 
-        {/* Live indicator */}
         {checkedIn && (
           <div className="flex items-center justify-center gap-2 text-sm text-success font-medium">
             <span className="relative flex h-2.5 w-2.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success" />
             </span>
-            {onBreak ? "On Break" : "Currently Working"}
+            {onBreak ? t("employeeDashboard.onBreak") : t("employeeDashboard.currentlyWorking")}
           </div>
         )}
 
-        {/* Correction Request */}
         <div className="rounded-xl border bg-card p-4 shadow-sm space-y-4">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <FileWarning className="h-3.5 w-3.5" /> Request Correction
+            <FileWarning className="h-3.5 w-3.5" /> {t("employeeDashboard.requestCorrection")}
           </h2>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Date</Label>
+              <Label className="text-xs">{t("employeeDashboard.date")}</Label>
               <Input type="date" value={reqDate} onChange={(e) => setReqDate(e.target.value)} className="h-11" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Request Type</Label>
+              <Label className="text-xs">{t("employeeDashboard.requestType")}</Label>
               <Select value={reqType} onValueChange={setReqType}>
-                <SelectTrigger className="h-11"><SelectValue placeholder="Select type..." /></SelectTrigger>
+                <SelectTrigger className="h-11"><SelectValue placeholder={t("employeeDashboard.selectType")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="missing_check_in">Missing Check In</SelectItem>
-                  <SelectItem value="missing_check_out">Missing Check Out</SelectItem>
-                  <SelectItem value="fill_missing_day">Fill Missing Day</SelectItem>
-                  <SelectItem value="correct_record">Correct Record</SelectItem>
+                  <SelectItem value="missing_check_in">{t("employeeDashboard.missingCheckIn")}</SelectItem>
+                  <SelectItem value="missing_check_out">{t("employeeDashboard.missingCheckOut")}</SelectItem>
+                  <SelectItem value="fill_missing_day">{t("employeeDashboard.fillMissingDay")}</SelectItem>
+                  <SelectItem value="correct_record">{t("employeeDashboard.correctRecord")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Note (optional)</Label>
-              <Textarea value={reqNote} onChange={(e) => setReqNote(e.target.value)} placeholder="Explain what happened..." className="min-h-[70px] resize-none" />
+              <Label className="text-xs">{t("employeeDashboard.note")}</Label>
+              <Textarea value={reqNote} onChange={(e) => setReqNote(e.target.value)} placeholder={t("employeeDashboard.notePlaceholder")} className="min-h-[70px] resize-none" />
             </div>
             <Button onClick={handleSubmitRequest} disabled={submitting} className="w-full h-11 gap-2">
-              {submitting ? "Submitting..." : <><Send className="h-4 w-4" /> Submit Request</>}
+              {submitting ? t("employeeDashboard.submitting") : <><Send className="h-4 w-4" /> {t("employeeDashboard.submitRequest")}</>}
             </Button>
           </div>
         </div>
