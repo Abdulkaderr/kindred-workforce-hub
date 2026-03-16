@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { StatCard } from "@/components/StatCard";
-import { Clock, UserCheck, AlertTriangle, CalendarDays, Pencil, Save, X, Plus } from "lucide-react";
+import { Clock, UserCheck, AlertTriangle, CalendarDays, Pencil, Save, X, Plus, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
