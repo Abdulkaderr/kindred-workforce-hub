@@ -276,6 +276,10 @@ export default function EmployeesPage() {
               <Input type="password" value={addPassword} onChange={(e) => setAddPassword(e.target.value)} placeholder="Min 6 characters" />
             </div>
             <div className="space-y-2">
+              <Label>Hourly Rate ($)</Label>
+              <Input type="number" min="0" step="0.01" value={addRate} onChange={(e) => setAddRate(e.target.value)} placeholder="25.00" />
+            </div>
+            <div className="space-y-2">
               <Label>Role</Label>
               <Select value={addRole} onValueChange={(v) => setAddRole(v as any)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
