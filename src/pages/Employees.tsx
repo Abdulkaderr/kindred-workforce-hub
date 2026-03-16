@@ -1,27 +1,57 @@
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { Plus, MoreVertical, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-const employees = [
-  { id: 1, name: "Sarah Johnson", email: "sarah@acme.com", company: "Acme Corp", role: "Developer", rate: 45, status: "active" },
-  { id: 2, name: "Mike Chen", email: "mike@acme.com", company: "Acme Corp", role: "Designer", rate: 40, status: "active" },
-  { id: 3, name: "Lisa Park", email: "lisa@techflow.com", company: "TechFlow Inc", role: "Manager", rate: 55, status: "active" },
-  { id: 4, name: "James Wilson", email: "james@buildright.com", company: "BuildRight Co", role: "Engineer", rate: 50, status: "active" },
-  { id: 5, name: "Emma Davis", email: "emma@techflow.com", company: "TechFlow Inc", role: "Analyst", rate: 42, status: "active" },
-  { id: 6, name: "Carlos Martinez", email: "carlos@acme.com", company: "Acme Corp", role: "Support", rate: 35, status: "inactive" },
-];
+type EmployeeRow = {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  role: string;
+};
 
 export default function EmployeesPage() {
+  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      const [profilesRes, rolesRes] = await Promise.all([
+        supabase.from("profiles").select("user_id, full_name, email"),
+        supabase.from("user_roles").select("user_id, role"),
+      ]);
+
+      const roles = new Map((rolesRes.data || []).map((r) => [r.user_id, r.role]));
+      const merged = (profilesRes.data || []).map((p) => ({
+        ...p,
+        role: roles.get(p.user_id) || "employee",
+      }));
+
+      setEmployees(merged);
+      setLoading(false);
+    };
+
+    fetchEmployees();
+  }, []);
+
+  const filtered = employees.filter((e) => {
+    if (!search) return true;
+    const s = search.toLowerCase();
+    return (
+      (e.full_name || "").toLowerCase().includes(s) ||
+      (e.email || "").toLowerCase().includes(s) ||
+      e.role.toLowerCase().includes(s)
+    );
+  });
+
   return (
     <DashboardLayout>
       <div className="page-header">
         <div>
           <h1 className="page-title">Employees</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Manage workforce across all companies</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Manage all registered employees</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-1.5" /> Add Employee
-        </Button>
       </div>
 
       <div className="rounded-md border bg-card shadow-sm">
@@ -31,44 +61,40 @@ export default function EmployeesPage() {
             <input
               type="text"
               placeholder="Search employees..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="h-8 w-full rounded-md border bg-background pl-9 pr-3 text-sm outline-none focus:ring-1 focus:ring-accent"
             />
           </div>
         </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Company</th>
-              <th>Role</th>
-              <th>Hourly Rate</th>
-              <th>Status</th>
-              <th className="w-12"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {employees.map((e) => (
-              <tr key={e.id}>
-                <td className="font-medium">{e.name}</td>
-                <td className="text-muted-foreground">{e.email}</td>
-                <td>{e.company}</td>
-                <td>{e.role}</td>
-                <td className="mono">${e.rate}/hr</td>
-                <td>
-                  <span className={`status-badge ${e.status === "active" ? "status-active" : "status-absent"}`}>
-                    {e.status === "active" ? "Active" : "Inactive"}
-                  </span>
-                </td>
-                <td>
-                  <button className="rounded p-1 hover:bg-muted transition-colors">
-                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </td>
+        {loading ? (
+          <p className="px-5 py-6 text-sm text-muted-foreground text-center">Loading...</p>
+        ) : filtered.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-muted-foreground text-center">No employees found.</p>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((e) => (
+                <tr key={e.user_id}>
+                  <td className="font-medium">{e.full_name || "—"}</td>
+                  <td className="text-muted-foreground">{e.email || "—"}</td>
+                  <td>
+                    <span className={`status-badge ${e.role === "admin" ? "status-active" : "status-completed"}`}>
+                      {e.role.charAt(0).toUpperCase() + e.role.slice(1)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </DashboardLayout>
   );
