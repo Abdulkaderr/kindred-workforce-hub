@@ -83,6 +83,51 @@ export type Database = {
         }
         Relationships: []
       }
+      payroll_records: {
+        Row: {
+          created_at: string
+          hourly_rate: number
+          id: string
+          paid_amount: number
+          period_end: string
+          period_start: string
+          period_type: string
+          status: string
+          total_hours: number
+          total_salary: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hourly_rate?: number
+          id?: string
+          paid_amount?: number
+          period_end: string
+          period_start: string
+          period_type?: string
+          status?: string
+          total_hours?: number
+          total_salary?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hourly_rate?: number
+          id?: string
+          paid_amount?: number
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          status?: string
+          total_hours?: number
+          total_salary?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
