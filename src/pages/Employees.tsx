@@ -84,7 +84,7 @@ export default function EmployeesPage() {
     setAddLoading(true);
 
     const { data: fnData, error: fnError } = await supabase.functions.invoke("admin-users", {
-      body: { action: "create_user", email: addEmail, password: addPassword, full_name: addName },
+      body: { action: "create_user", email: addEmail, password: addPassword, full_name: addName, hourly_rate: Number(addRate) || 0 },
     });
 
     if (fnError || fnData?.error) {
