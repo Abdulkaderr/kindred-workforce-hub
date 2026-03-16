@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { StatCard } from "@/components/StatCard";
-import { Clock, UserCheck, AlertTriangle, CalendarDays, Pencil, Save, X } from "lucide-react";
+import { Clock, UserCheck, AlertTriangle, CalendarDays, Pencil, Save, X, Plus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -58,6 +60,15 @@ export default function AttendancePage() {
   const [filterEmployee, setFilterEmployee] = useState("all");
   const [loading, setLoading] = useState(true);
 
+  // Add attendance state
+  const [addOpen, setAddOpen] = useState(false);
+  const [addUserId, setAddUserId] = useState("");
+  const [addDate, setAddDate] = useState(new Date().toISOString().split("T")[0]);
+  const [addCheckIn, setAddCheckIn] = useState("");
+  const [addCheckOut, setAddCheckOut] = useState("");
+  const [addStatus, setAddStatus] = useState("checked_in");
+  const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
+
   // Editing state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCheckIn, setEditCheckIn] = useState("");
@@ -87,12 +98,41 @@ export default function AttendancePage() {
 
     setRecords(recordsRes.data || []);
     setProfiles(profilesRes.data || []);
+    if (isAdmin && profilesRes.data) setAllProfiles(profilesRes.data as Profile[]);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
   }, [user, period, isAdmin]);
+
+  const addAttendance = async () => {
+    if (!addUserId) {
+      toast({ title: "Select an employee", variant: "destructive" });
+      return;
+    }
+    const insert: any = {
+      user_id: addUserId,
+      date: addDate,
+      status: addStatus,
+      break_duration_ms: 0,
+    };
+    if (addCheckIn) insert.check_in_time = new Date(`${addDate}T${addCheckIn}`).toISOString();
+    if (addCheckOut) insert.check_out_time = new Date(`${addDate}T${addCheckOut}`).toISOString();
+
+    const { error } = await supabase.from("attendance_records").insert(insert);
+    if (error) {
+      toast({ title: "Failed to add", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Attendance added" });
+      setAddOpen(false);
+      setAddUserId("");
+      setAddCheckIn("");
+      setAddCheckOut("");
+      setAddStatus("checked_in");
+      fetchData();
+    }
+  };
 
   const getName = (userId: string) => {
     const p = profiles.find((p) => p.user_id === userId);
@@ -156,6 +196,58 @@ export default function AttendancePage() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
+          {isAdmin && (
+            <Dialog open={addOpen} onOpenChange={setAddOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add Attendance</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Add Attendance Record</DialogTitle></DialogHeader>
+                <div className="grid gap-4 py-2">
+                  <div className="grid gap-1.5">
+                    <Label>Employee</Label>
+                    <Select value={addUserId} onValueChange={setAddUserId}>
+                      <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                      <SelectContent>
+                        {allProfiles.map((p) => (
+                          <SelectItem key={p.user_id} value={p.user_id}>
+                            {p.full_name || p.email || p.user_id.slice(0, 8)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label>Date</Label>
+                    <Input type="date" value={addDate} onChange={(e) => setAddDate(e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-1.5">
+                      <Label>Check In</Label>
+                      <Input type="time" value={addCheckIn} onChange={(e) => setAddCheckIn(e.target.value)} />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label>Check Out</Label>
+                      <Input type="time" value={addCheckOut} onChange={(e) => setAddCheckOut(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label>Status</Label>
+                    <Select value={addStatus} onValueChange={setAddStatus}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="checked_in">Checked In</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="late">Late</SelectItem>
+                        <SelectItem value="absent">Absent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={addAttendance}>Add Record</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
           {isAdmin && (
             <Select value={filterEmployee} onValueChange={setFilterEmployee}>
               <SelectTrigger className="w-[180px]"><SelectValue placeholder="All Employees" /></SelectTrigger>
