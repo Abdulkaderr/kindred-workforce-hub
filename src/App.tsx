@@ -3,16 +3,19 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
-import Employees from "./pages/Employees.tsx";
-import Attendance from "./pages/Attendance.tsx";
-import Payroll from "./pages/Payroll.tsx";
-import Locations from "./pages/Locations.tsx";
-import Requests from "./pages/Requests.tsx";
-import Reports from "./pages/Reports.tsx";
-import Settings from "./pages/Settings.tsx";
+import Login from "./pages/Login";
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
+import Employees from "./pages/Employees";
+import Attendance from "./pages/Attendance";
+import Payroll from "./pages/Payroll";
+import Locations from "./pages/Locations";
+import Requests from "./pages/Requests";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -22,18 +25,20 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          
-          <Route path="/employees" element={<Employees />} />
-          <Route path="/attendance" element={<Attendance />} />
-          <Route path="/payroll" element={<Payroll />} />
-          <Route path="/locations" element={<Locations />} />
-          <Route path="/requests" element={<Requests />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/employees" element={<ProtectedRoute><Employees /></ProtectedRoute>} />
+            <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+            <Route path="/payroll" element={<ProtectedRoute><Payroll /></ProtectedRoute>} />
+            <Route path="/locations" element={<ProtectedRoute><Locations /></ProtectedRoute>} />
+            <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
