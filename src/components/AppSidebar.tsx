@@ -25,10 +25,10 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, section: "Overview" },
   { title: "Employees", url: "/employees", icon: Users, section: "Management", adminOnly: true },
-  { title: "Attendance", url: "/attendance", icon: Clock, section: "Management", adminOnly: true },
+  { title: "Attendance", url: "/attendance", icon: Clock, section: "Management" },
   { title: "Payroll", url: "/payroll", icon: DollarSign, section: "Management", adminOnly: true },
   { title: "Locations", url: "/locations", icon: MapPin, section: "Management", adminOnly: true },
-  { title: "Requests", url: "/requests", icon: ClipboardList, section: "Management", adminOnly: true },
+  { title: "Requests", url: "/requests", icon: ClipboardList, section: "Management" },
   { title: "Reports", url: "/reports", icon: FileText, section: "Reports" },
   { title: "Settings", url: "/settings", icon: Settings, section: "System" },
 ];
