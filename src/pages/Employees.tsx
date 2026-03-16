@@ -14,6 +14,7 @@ type EmployeeRow = {
   user_id: string;
   full_name: string | null;
   email: string | null;
+  hourly_rate: number;
   role: string;
 };
 
@@ -30,6 +31,7 @@ export default function EmployeesPage() {
   const [addName, setAddName] = useState("");
   const [addPassword, setAddPassword] = useState("");
   const [addRole, setAddRole] = useState<"employee" | "admin">("employee");
+  const [addRate, setAddRate] = useState("");
   const [addLoading, setAddLoading] = useState(false);
 
   // Edit employee modal
@@ -37,6 +39,7 @@ export default function EmployeesPage() {
   const [editEmployee, setEditEmployee] = useState<EmployeeRow | null>(null);
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<"employee" | "admin">("employee");
+  const [editRate, setEditRate] = useState("");
   const [editLoading, setEditLoading] = useState(false);
 
   // Change password modal
@@ -47,13 +50,14 @@ export default function EmployeesPage() {
 
   const fetchEmployees = async () => {
     const [profilesRes, rolesRes] = await Promise.all([
-      supabase.from("profiles").select("user_id, full_name, email"),
+      supabase.from("profiles").select("user_id, full_name, email, hourly_rate"),
       supabase.from("user_roles").select("user_id, role"),
     ]);
 
     const roles = new Map((rolesRes.data || []).map((r: any) => [r.user_id, r.role]));
     const merged = (profilesRes.data || []).map((p: any) => ({
       ...p,
+      hourly_rate: Number(p.hourly_rate) || 0,
       role: roles.get(p.user_id) || "employee",
     }));
 
@@ -80,7 +84,7 @@ export default function EmployeesPage() {
     setAddLoading(true);
 
     const { data: fnData, error: fnError } = await supabase.functions.invoke("admin-users", {
-      body: { action: "create_user", email: addEmail, password: addPassword, full_name: addName },
+      body: { action: "create_user", email: addEmail, password: addPassword, full_name: addName, hourly_rate: Number(addRate) || 0 },
     });
 
     if (fnError || fnData?.error) {
@@ -89,9 +93,14 @@ export default function EmployeesPage() {
       return;
     }
 
-    // Update role if admin
-    if (fnData?.user && addRole === "admin") {
-      await supabase.from("user_roles").update({ role: "admin" as any }).eq("user_id", fnData.user.id);
+    // Update role and hourly_rate
+    if (fnData?.user) {
+      if (addRole === "admin") {
+        await supabase.from("user_roles").update({ role: "admin" as any }).eq("user_id", fnData.user.id);
+      }
+      if (Number(addRate) > 0) {
+        await supabase.from("profiles").update({ hourly_rate: Number(addRate) } as any).eq("user_id", fnData.user.id);
+      }
     }
 
     toast({ title: "Employee added", description: `${addName} has been added successfully.` });
@@ -100,6 +109,7 @@ export default function EmployeesPage() {
     setAddName("");
     setAddPassword("");
     setAddRole("employee");
+    setAddRate("");
     setAddLoading(false);
     fetchEmployees();
   };
@@ -109,7 +119,7 @@ export default function EmployeesPage() {
     setEditLoading(true);
 
     const [profileRes, roleRes] = await Promise.all([
-      supabase.from("profiles").update({ full_name: editName }).eq("user_id", editEmployee.user_id),
+      supabase.from("profiles").update({ full_name: editName, hourly_rate: Number(editRate) || 0 } as any).eq("user_id", editEmployee.user_id),
       supabase.from("user_roles").update({ role: editRole as any }).eq("user_id", editEmployee.user_id),
     ]);
 
@@ -143,6 +153,7 @@ export default function EmployeesPage() {
     setEditEmployee(emp);
     setEditName(emp.full_name || "");
     setEditRole(emp.role as "employee" | "admin");
+    setEditRate(String(emp.hourly_rate || 0));
     setEditOpen(true);
   };
 
@@ -206,6 +217,7 @@ export default function EmployeesPage() {
               <tr>
                 <th>Name</th>
                 <th>Email</th>
+                <th>Rate</th>
                 <th>Role</th>
                 {isAdmin && <th>Actions</th>}
               </tr>
@@ -215,6 +227,7 @@ export default function EmployeesPage() {
                 <tr key={e.user_id}>
                   <td className="font-medium">{e.full_name || "—"}</td>
                   <td className="text-muted-foreground">{e.email || "—"}</td>
+                  <td className="mono">${e.hourly_rate}/hr</td>
                   <td>
                     <span className={`status-badge ${e.role === "admin" ? "status-active" : "status-completed"}`}>
                       {e.role.charAt(0).toUpperCase() + e.role.slice(1)}
@@ -263,6 +276,10 @@ export default function EmployeesPage() {
               <Input type="password" value={addPassword} onChange={(e) => setAddPassword(e.target.value)} placeholder="Min 6 characters" />
             </div>
             <div className="space-y-2">
+              <Label>Hourly Rate ($)</Label>
+              <Input type="number" min="0" step="0.01" value={addRate} onChange={(e) => setAddRate(e.target.value)} placeholder="25.00" />
+            </div>
+            <div className="space-y-2">
               <Label>Role</Label>
               <Select value={addRole} onValueChange={(v) => setAddRole(v as any)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -293,6 +310,10 @@ export default function EmployeesPage() {
             <div className="space-y-2">
               <Label>Full Name</Label>
               <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Hourly Rate ($)</Label>
+              <Input type="number" min="0" step="0.01" value={editRate} onChange={(e) => setEditRate(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Role</Label>
