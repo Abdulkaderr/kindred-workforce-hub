@@ -8,7 +8,6 @@ import {
   Clock,
   FileWarning,
   Send,
-  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -36,6 +35,7 @@ export default function EmployeeDashboard() {
   const [checkOutTime, setCheckOutTime] = useState<string | null>(null);
   const [breakStart, setBreakStart] = useState<number | null>(null);
   const [totalBreakMs, setTotalBreakMs] = useState(0);
+  const [recordId, setRecordId] = useState<string | null>(null);
 
   // Correction request state
   const [reqDate, setReqDate] = useState("");
@@ -50,31 +50,124 @@ export default function EmployeeDashboard() {
       hour12: true,
     });
 
-  const handleCheckIn = () => {
+  // Load today's record on mount
+  useEffect(() => {
+    if (!user) return;
+    const today = new Date().toISOString().split("T")[0];
+    supabase
+      .from("attendance_records")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("date", today)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setRecordId(data.id);
+          if (data.check_in_time) {
+            setCheckInTime(
+              new Date(data.check_in_time).toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })
+            );
+          }
+          if (data.check_out_time) {
+            setCheckOutTime(
+              new Date(data.check_out_time).toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })
+            );
+          } else if (data.check_in_time) {
+            setCheckedIn(true);
+          }
+          setTotalBreakMs(Number(data.break_duration_ms) || 0);
+        }
+      });
+  }, [user]);
+
+  const handleCheckIn = async () => {
+    if (!user) return;
+    const timestamp = new Date().toISOString();
     setCheckInTime(now());
     setCheckOutTime(null);
     setTotalBreakMs(0);
     setCheckedIn(true);
+
+    const { data, error } = await supabase
+      .from("attendance_records")
+      .upsert(
+        {
+          user_id: user.id,
+          date: new Date().toISOString().split("T")[0],
+          check_in_time: timestamp,
+          check_out_time: null,
+          break_duration_ms: 0,
+          status: "checked_in",
+        },
+        { onConflict: "user_id,date" }
+      )
+      .select()
+      .single();
+
+    if (error) {
+      toast({ title: "Check-in failed", description: error.message, variant: "destructive" });
+    } else if (data) {
+      setRecordId(data.id);
+    }
   };
 
-  const handleCheckOut = () => {
+  const handleCheckOut = async () => {
+    const finalBreak =
+      totalBreakMs + (onBreak && breakStart ? Date.now() - breakStart : 0);
     setCheckOutTime(now());
     setCheckedIn(false);
-    if (onBreak && breakStart) {
-      setTotalBreakMs((prev) => prev + (Date.now() - breakStart));
-    }
     setOnBreak(false);
     setBreakStart(null);
+    setTotalBreakMs(finalBreak);
+
+    if (recordId) {
+      const { error } = await supabase
+        .from("attendance_records")
+        .update({
+          check_out_time: new Date().toISOString(),
+          break_duration_ms: finalBreak,
+          status: "completed",
+        })
+        .eq("id", recordId);
+
+      if (error) {
+        toast({ title: "Check-out failed", description: error.message, variant: "destructive" });
+      }
+    }
   };
 
-  const handleBreakToggle = () => {
+  const handleBreakToggle = async () => {
     if (onBreak && breakStart) {
-      setTotalBreakMs((prev) => prev + (Date.now() - breakStart));
+      const newTotal = totalBreakMs + (Date.now() - breakStart);
+      setTotalBreakMs(newTotal);
       setBreakStart(null);
+      setOnBreak(false);
+
+      if (recordId) {
+        await supabase
+          .from("attendance_records")
+          .update({ break_duration_ms: newTotal, status: "checked_in" })
+          .eq("id", recordId);
+      }
     } else {
       setBreakStart(Date.now());
+      setOnBreak(true);
+
+      if (recordId) {
+        await supabase
+          .from("attendance_records")
+          .update({ status: "on_break" })
+          .eq("id", recordId);
+      }
     }
-    setOnBreak(!onBreak);
   };
 
   const formatBreak = (ms: number) => {
@@ -130,31 +223,18 @@ export default function EmployeeDashboard() {
           </h2>
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="rounded-lg bg-muted/50 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Check In
-              </p>
-              <p className="mt-1 text-sm font-semibold text-foreground mono">
-                {checkInTime || "—"}
-              </p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Check In</p>
+              <p className="mt-1 text-sm font-semibold text-foreground mono">{checkInTime || "—"}</p>
             </div>
             <div className="rounded-lg bg-muted/50 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Check Out
-              </p>
-              <p className="mt-1 text-sm font-semibold text-foreground mono">
-                {checkOutTime || "—"}
-              </p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Check Out</p>
+              <p className="mt-1 text-sm font-semibold text-foreground mono">{checkOutTime || "—"}</p>
             </div>
             <div className="rounded-lg bg-muted/50 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Break
-              </p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Break</p>
               <p className="mt-1 text-sm font-semibold text-foreground mono">
                 {totalBreakMs > 0 || onBreak
-                  ? formatBreak(
-                      totalBreakMs +
-                        (onBreak && breakStart ? Date.now() - breakStart : 0)
-                    )
+                  ? formatBreak(totalBreakMs + (onBreak && breakStart ? Date.now() - breakStart : 0))
                   : "—"}
               </p>
             </div>
@@ -163,60 +243,25 @@ export default function EmployeeDashboard() {
 
         {/* Attendance Action Buttons */}
         <div className="grid grid-cols-2 gap-3">
-          {/* Check In */}
-          <button
-            onClick={handleCheckIn}
-            disabled={checkedIn}
-            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-primary/20 bg-primary/5 p-6 transition-all hover:bg-primary/10 hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
-          >
-            <div className="rounded-full bg-primary p-3">
-              <LogIn className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <span className="text-sm font-semibold text-foreground">
-              Check In
-            </span>
+          <button onClick={handleCheckIn} disabled={checkedIn}
+            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-primary/20 bg-primary/5 p-6 transition-all hover:bg-primary/10 hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95">
+            <div className="rounded-full bg-primary p-3"><LogIn className="h-6 w-6 text-primary-foreground" /></div>
+            <span className="text-sm font-semibold text-foreground">Check In</span>
           </button>
-
-          {/* Check Out */}
-          <button
-            onClick={handleCheckOut}
-            disabled={!checkedIn}
-            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-destructive/20 bg-destructive/5 p-6 transition-all hover:bg-destructive/10 hover:border-destructive/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
-          >
-            <div className="rounded-full bg-destructive p-3">
-              <LogOut className="h-6 w-6 text-destructive-foreground" />
-            </div>
-            <span className="text-sm font-semibold text-foreground">
-              Check Out
-            </span>
+          <button onClick={handleCheckOut} disabled={!checkedIn}
+            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-destructive/20 bg-destructive/5 p-6 transition-all hover:bg-destructive/10 hover:border-destructive/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95">
+            <div className="rounded-full bg-destructive p-3"><LogOut className="h-6 w-6 text-destructive-foreground" /></div>
+            <span className="text-sm font-semibold text-foreground">Check Out</span>
           </button>
-
-          {/* Start Break */}
-          <button
-            onClick={handleBreakToggle}
-            disabled={!checkedIn || onBreak}
-            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-warning/20 bg-warning/5 p-6 transition-all hover:bg-warning/10 hover:border-warning/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
-          >
-            <div className="rounded-full bg-warning p-3">
-              <Coffee className="h-6 w-6 text-warning-foreground" />
-            </div>
-            <span className="text-sm font-semibold text-foreground">
-              Start Break
-            </span>
+          <button onClick={handleBreakToggle} disabled={!checkedIn || onBreak}
+            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-warning/20 bg-warning/5 p-6 transition-all hover:bg-warning/10 hover:border-warning/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95">
+            <div className="rounded-full bg-warning p-3"><Coffee className="h-6 w-6 text-warning-foreground" /></div>
+            <span className="text-sm font-semibold text-foreground">Start Break</span>
           </button>
-
-          {/* End Break */}
-          <button
-            onClick={handleBreakToggle}
-            disabled={!onBreak}
-            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-success/20 bg-success/5 p-6 transition-all hover:bg-success/10 hover:border-success/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
-          >
-            <div className="rounded-full bg-success p-3">
-              <Timer className="h-6 w-6 text-success-foreground" />
-            </div>
-            <span className="text-sm font-semibold text-foreground">
-              End Break
-            </span>
+          <button onClick={handleBreakToggle} disabled={!onBreak}
+            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-success/20 bg-success/5 p-6 transition-all hover:bg-success/10 hover:border-success/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95">
+            <div className="rounded-full bg-success p-3"><Timer className="h-6 w-6 text-success-foreground" /></div>
+            <span className="text-sm font-semibold text-foreground">End Break</span>
           </button>
         </div>
 
@@ -236,24 +281,15 @@ export default function EmployeeDashboard() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             <FileWarning className="h-3.5 w-3.5" /> Request Correction
           </h2>
-
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Date</Label>
-              <Input
-                type="date"
-                value={reqDate}
-                onChange={(e) => setReqDate(e.target.value)}
-                className="h-11"
-              />
+              <Input type="date" value={reqDate} onChange={(e) => setReqDate(e.target.value)} className="h-11" />
             </div>
-
             <div className="space-y-1.5">
               <Label className="text-xs">Request Type</Label>
               <Select value={reqType} onValueChange={setReqType}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Select type..." />
-                </SelectTrigger>
+                <SelectTrigger className="h-11"><SelectValue placeholder="Select type..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="missing_check_in">Missing Check In</SelectItem>
                   <SelectItem value="missing_check_out">Missing Check Out</SelectItem>
@@ -262,29 +298,12 @@ export default function EmployeeDashboard() {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-1.5">
               <Label className="text-xs">Note (optional)</Label>
-              <Textarea
-                value={reqNote}
-                onChange={(e) => setReqNote(e.target.value)}
-                placeholder="Explain what happened..."
-                className="min-h-[70px] resize-none"
-              />
+              <Textarea value={reqNote} onChange={(e) => setReqNote(e.target.value)} placeholder="Explain what happened..." className="min-h-[70px] resize-none" />
             </div>
-
-            <Button
-              onClick={handleSubmitRequest}
-              disabled={submitting}
-              className="w-full h-11 gap-2"
-            >
-              {submitting ? (
-                "Submitting..."
-              ) : (
-                <>
-                  <Send className="h-4 w-4" /> Submit Request
-                </>
-              )}
+            <Button onClick={handleSubmitRequest} disabled={submitting} className="w-full h-11 gap-2">
+              {submitting ? "Submitting..." : <><Send className="h-4 w-4" /> Submit Request</>}
             </Button>
           </div>
         </div>
