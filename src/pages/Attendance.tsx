@@ -60,6 +60,15 @@ export default function AttendancePage() {
   const [filterEmployee, setFilterEmployee] = useState("all");
   const [loading, setLoading] = useState(true);
 
+  // Add attendance state
+  const [addOpen, setAddOpen] = useState(false);
+  const [addUserId, setAddUserId] = useState("");
+  const [addDate, setAddDate] = useState(new Date().toISOString().split("T")[0]);
+  const [addCheckIn, setAddCheckIn] = useState("");
+  const [addCheckOut, setAddCheckOut] = useState("");
+  const [addStatus, setAddStatus] = useState("checked_in");
+  const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
+
   // Editing state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCheckIn, setEditCheckIn] = useState("");
