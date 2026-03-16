@@ -26,7 +26,7 @@ const navItems: NavItem[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, section: "Overview" },
   { title: "Employees", url: "/employees", icon: Users, section: "Management", adminOnly: true },
   { title: "Attendance", url: "/attendance", icon: Clock, section: "Management" },
-  { title: "Payroll", url: "/payroll", icon: DollarSign, section: "Management", adminOnly: true },
+  { title: "Payroll", url: "/payroll", icon: DollarSign, section: "Management" },
   { title: "Locations", url: "/locations", icon: MapPin, section: "Management", adminOnly: true },
   { title: "Requests", url: "/requests", icon: ClipboardList, section: "Management" },
   { title: "Reports", url: "/reports", icon: FileText, section: "Reports" },
