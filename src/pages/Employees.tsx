@@ -121,7 +121,7 @@ export default function EmployeesPage() {
     setEditLoading(true);
 
     const [profileRes, roleRes] = await Promise.all([
-      supabase.from("profiles").update({ full_name: editName }).eq("user_id", editEmployee.user_id),
+      supabase.from("profiles").update({ full_name: editName, hourly_rate: Number(editRate) || 0 } as any).eq("user_id", editEmployee.user_id),
       supabase.from("user_roles").update({ role: editRole as any }).eq("user_id", editEmployee.user_id),
     ]);
 
