@@ -197,6 +197,58 @@ export default function AttendancePage() {
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {isAdmin && (
+            <Dialog open={addOpen} onOpenChange={setAddOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add Attendance</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Add Attendance Record</DialogTitle></DialogHeader>
+                <div className="grid gap-4 py-2">
+                  <div className="grid gap-1.5">
+                    <Label>Employee</Label>
+                    <Select value={addUserId} onValueChange={setAddUserId}>
+                      <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                      <SelectContent>
+                        {allProfiles.map((p) => (
+                          <SelectItem key={p.user_id} value={p.user_id}>
+                            {p.full_name || p.email || p.user_id.slice(0, 8)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label>Date</Label>
+                    <Input type="date" value={addDate} onChange={(e) => setAddDate(e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-1.5">
+                      <Label>Check In</Label>
+                      <Input type="time" value={addCheckIn} onChange={(e) => setAddCheckIn(e.target.value)} />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label>Check Out</Label>
+                      <Input type="time" value={addCheckOut} onChange={(e) => setAddCheckOut(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label>Status</Label>
+                    <Select value={addStatus} onValueChange={setAddStatus}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="checked_in">Checked In</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="late">Late</SelectItem>
+                        <SelectItem value="absent">Absent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={addAttendance}>Add Record</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+          {isAdmin && (
             <Select value={filterEmployee} onValueChange={setFilterEmployee}>
               <SelectTrigger className="w-[180px]"><SelectValue placeholder="All Employees" /></SelectTrigger>
               <SelectContent>
