@@ -1,184 +1,293 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { StatCard } from "@/components/StatCard";
 import { useAuth } from "@/contexts/AuthContext";
-import { Clock, CalendarDays, DollarSign, Coffee, PlayCircle, StopCircle, Timer } from "lucide-react";
+import {
+  LogIn,
+  LogOut,
+  Coffee,
+  Timer,
+  Clock,
+  FileWarning,
+  Send,
+  CheckCircle2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState } from "react";
-
-const attendanceHistory = [
-  { date: "2026-03-16", checkIn: "08:02", checkOut: "17:05", breakTime: "0:30", totalHours: "8:33", status: "completed" },
-  { date: "2026-03-15", checkIn: "08:10", checkOut: "17:00", breakTime: "0:30", totalHours: "8:20", status: "completed" },
-  { date: "2026-03-14", checkIn: "07:55", checkOut: "17:01", breakTime: "1:00", totalHours: "8:06", status: "completed" },
-  { date: "2026-03-13", checkIn: "08:30", checkOut: "17:15", breakTime: "0:45", totalHours: "8:00", status: "completed" },
-  { date: "2026-03-12", checkIn: "09:15", checkOut: "17:00", breakTime: "0:30", totalHours: "7:15", status: "late" },
-];
-
-const paymentHistory = [
-  { period: "March 2026", hours: 120.5, rate: 45, amount: 5422.5, status: "pending" },
-  { period: "February 2026", hours: 176.0, rate: 45, amount: 7920, status: "paid" },
-  { period: "January 2026", hours: 168.0, rate: 45, amount: 7560, status: "paid" },
-];
-
-const statusStyles: Record<string, string> = {
-  completed: "status-completed",
-  late: "status-late",
-  working: "status-active",
-  paid: "status-completed",
-  pending: "status-pending",
-};
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
-  const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Employee";
+  const displayName =
+    user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Employee";
 
   const [checkedIn, setCheckedIn] = useState(false);
   const [onBreak, setOnBreak] = useState(false);
   const [checkInTime, setCheckInTime] = useState<string | null>(null);
+  const [checkOutTime, setCheckOutTime] = useState<string | null>(null);
+  const [breakStart, setBreakStart] = useState<number | null>(null);
+  const [totalBreakMs, setTotalBreakMs] = useState(0);
+
+  // Correction request state
+  const [reqDate, setReqDate] = useState("");
+  const [reqType, setReqType] = useState("");
+  const [reqNote, setReqNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const now = () =>
+    new Date().toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
 
   const handleCheckIn = () => {
-    const now = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
-    setCheckInTime(now);
+    setCheckInTime(now());
+    setCheckOutTime(null);
+    setTotalBreakMs(0);
     setCheckedIn(true);
   };
 
   const handleCheckOut = () => {
+    setCheckOutTime(now());
     setCheckedIn(false);
+    if (onBreak && breakStart) {
+      setTotalBreakMs((prev) => prev + (Date.now() - breakStart));
+    }
     setOnBreak(false);
-    setCheckInTime(null);
+    setBreakStart(null);
   };
 
-  const totalHoursThisMonth = 120.5;
-  const totalDaysThisMonth = 15;
-  const salaryThisMonth = 5422.5;
+  const handleBreakToggle = () => {
+    if (onBreak && breakStart) {
+      setTotalBreakMs((prev) => prev + (Date.now() - breakStart));
+      setBreakStart(null);
+    } else {
+      setBreakStart(Date.now());
+    }
+    setOnBreak(!onBreak);
+  };
+
+  const formatBreak = (ms: number) => {
+    const mins = Math.round(ms / 60000);
+    if (mins < 60) return `${mins}m`;
+    return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  };
+
+  const handleSubmitRequest = async () => {
+    if (!reqDate || !reqType) {
+      toast({ title: "Please fill in the date and request type", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase.from("correction_requests").insert({
+      user_id: user!.id,
+      request_date: reqDate,
+      request_type: reqType,
+      note: reqNote || null,
+    });
+    setSubmitting(false);
+    if (error) {
+      toast({ title: "Failed to submit request", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Request submitted", description: "Your admin will review it shortly." });
+      setReqDate("");
+      setReqType("");
+      setReqNote("");
+    }
+  };
 
   return (
     <DashboardLayout>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Welcome, {displayName}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Your attendance and salary overview</p>
+      <div className="mx-auto max-w-md w-full space-y-6 py-2">
+        {/* Greeting */}
+        <div className="text-center">
+          <h1 className="text-xl font-semibold text-foreground">
+            Hello, {displayName} 👋
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
         </div>
-        <p className="mono text-muted-foreground">
-          {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-        </p>
-      </div>
 
-      {/* Check-In / Check-Out Controls */}
-      <div className="rounded-md border bg-card shadow-sm p-5 mb-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">Today's Status</h2>
-            {checkedIn ? (
-              <p className="text-sm text-muted-foreground mt-1">
-                Checked in at <span className="mono font-medium text-success">{checkInTime}</span>
-                {onBreak && <span className="ml-2 text-warning font-medium">• On Break</span>}
+        {/* Today Status */}
+        <div className="rounded-xl border bg-card p-4 shadow-sm space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5" /> Today's Status
+          </h2>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="rounded-lg bg-muted/50 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Check In
               </p>
-            ) : (
-              <p className="text-sm text-muted-foreground mt-1">You haven't checked in yet</p>
-            )}
+              <p className="mt-1 text-sm font-semibold text-foreground mono">
+                {checkInTime || "—"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Check Out
+              </p>
+              <p className="mt-1 text-sm font-semibold text-foreground mono">
+                {checkOutTime || "—"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-muted/50 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Break
+              </p>
+              <p className="mt-1 text-sm font-semibold text-foreground mono">
+                {totalBreakMs > 0 || onBreak
+                  ? formatBreak(
+                      totalBreakMs +
+                        (onBreak && breakStart ? Date.now() - breakStart : 0)
+                    )
+                  : "—"}
+              </p>
+            </div>
           </div>
-          <div className="flex gap-2">
-            {!checkedIn ? (
-              <Button onClick={handleCheckIn} className="gap-2">
-                <PlayCircle className="h-4 w-4" /> Check In
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setOnBreak(!onBreak)}
-                  className="gap-2"
-                >
-                  {onBreak ? <Timer className="h-4 w-4" /> : <Coffee className="h-4 w-4" />}
-                  {onBreak ? "End Break" : "Start Break"}
-                </Button>
-                <Button variant="destructive" onClick={handleCheckOut} className="gap-2">
-                  <StopCircle className="h-4 w-4" /> Check Out
-                </Button>
-              </>
-            )}
+        </div>
+
+        {/* Attendance Action Buttons */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Check In */}
+          <button
+            onClick={handleCheckIn}
+            disabled={checkedIn}
+            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-primary/20 bg-primary/5 p-6 transition-all hover:bg-primary/10 hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+          >
+            <div className="rounded-full bg-primary p-3">
+              <LogIn className="h-6 w-6 text-primary-foreground" />
+            </div>
+            <span className="text-sm font-semibold text-foreground">
+              Check In
+            </span>
+          </button>
+
+          {/* Check Out */}
+          <button
+            onClick={handleCheckOut}
+            disabled={!checkedIn}
+            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-destructive/20 bg-destructive/5 p-6 transition-all hover:bg-destructive/10 hover:border-destructive/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+          >
+            <div className="rounded-full bg-destructive p-3">
+              <LogOut className="h-6 w-6 text-destructive-foreground" />
+            </div>
+            <span className="text-sm font-semibold text-foreground">
+              Check Out
+            </span>
+          </button>
+
+          {/* Start Break */}
+          <button
+            onClick={handleBreakToggle}
+            disabled={!checkedIn || onBreak}
+            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-warning/20 bg-warning/5 p-6 transition-all hover:bg-warning/10 hover:border-warning/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+          >
+            <div className="rounded-full bg-warning p-3">
+              <Coffee className="h-6 w-6 text-warning-foreground" />
+            </div>
+            <span className="text-sm font-semibold text-foreground">
+              Start Break
+            </span>
+          </button>
+
+          {/* End Break */}
+          <button
+            onClick={handleBreakToggle}
+            disabled={!onBreak}
+            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-success/20 bg-success/5 p-6 transition-all hover:bg-success/10 hover:border-success/40 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+          >
+            <div className="rounded-full bg-success p-3">
+              <Timer className="h-6 w-6 text-success-foreground" />
+            </div>
+            <span className="text-sm font-semibold text-foreground">
+              End Break
+            </span>
+          </button>
+        </div>
+
+        {/* Live indicator */}
+        {checkedIn && (
+          <div className="flex items-center justify-center gap-2 text-sm text-success font-medium">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success" />
+            </span>
+            {onBreak ? "On Break" : "Currently Working"}
+          </div>
+        )}
+
+        {/* Correction Request */}
+        <div className="rounded-xl border bg-card p-4 shadow-sm space-y-4">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <FileWarning className="h-3.5 w-3.5" /> Request Correction
+          </h2>
+
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Date</Label>
+              <Input
+                type="date"
+                value={reqDate}
+                onChange={(e) => setReqDate(e.target.value)}
+                className="h-11"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Request Type</Label>
+              <Select value={reqType} onValueChange={setReqType}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Select type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="missing_check_in">Missing Check In</SelectItem>
+                  <SelectItem value="missing_check_out">Missing Check Out</SelectItem>
+                  <SelectItem value="fill_missing_day">Fill Missing Day</SelectItem>
+                  <SelectItem value="correct_record">Correct Record</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Note (optional)</Label>
+              <Textarea
+                value={reqNote}
+                onChange={(e) => setReqNote(e.target.value)}
+                placeholder="Explain what happened..."
+                className="min-h-[70px] resize-none"
+              />
+            </div>
+
+            <Button
+              onClick={handleSubmitRequest}
+              disabled={submitting}
+              className="w-full h-11 gap-2"
+            >
+              {submitting ? (
+                "Submitting..."
+              ) : (
+                <>
+                  <Send className="h-4 w-4" /> Submit Request
+                </>
+              )}
+            </Button>
           </div>
         </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatCard title="Hours This Month" value={totalHoursThisMonth.toFixed(1)} icon={Clock} variant="default" />
-        <StatCard title="Days Worked" value={totalDaysThisMonth} icon={CalendarDays} variant="accent" />
-        <StatCard title="Salary This Month" value={`$${salaryThisMonth.toLocaleString()}`} icon={DollarSign} variant="success" />
-        <StatCard title="Hourly Rate" value="$45/hr" icon={DollarSign} variant="warning" />
-      </div>
-
-      {/* Attendance History */}
-      <div className="rounded-md border bg-card shadow-sm mb-6">
-        <div className="flex items-center justify-between border-b px-5 py-3">
-          <h2 className="text-sm font-semibold flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" /> Recent Attendance
-          </h2>
-        </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Check In</th>
-              <th>Check Out</th>
-              <th>Break</th>
-              <th>Total Hours</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {attendanceHistory.map((a, i) => (
-              <tr key={i}>
-                <td className="mono">{a.date}</td>
-                <td className="mono">{a.checkIn}</td>
-                <td className="mono">{a.checkOut}</td>
-                <td className="mono">{a.breakTime}</td>
-                <td className="mono font-medium">{a.totalHours}</td>
-                <td>
-                  <span className={`status-badge ${statusStyles[a.status]}`}>
-                    {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Payment History */}
-      <div className="rounded-md border bg-card shadow-sm">
-        <div className="flex items-center justify-between border-b px-5 py-3">
-          <h2 className="text-sm font-semibold flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" /> Payment History
-          </h2>
-        </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Period</th>
-              <th>Hours</th>
-              <th>Rate</th>
-              <th>Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paymentHistory.map((p, i) => (
-              <tr key={i}>
-                <td className="font-medium">{p.period}</td>
-                <td className="mono">{p.hours.toFixed(1)}</td>
-                <td className="mono">${p.rate}/hr</td>
-                <td className="mono font-medium">${p.amount.toLocaleString()}</td>
-                <td>
-                  <span className={`status-badge ${statusStyles[p.status]}`}>
-                    {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </DashboardLayout>
   );
