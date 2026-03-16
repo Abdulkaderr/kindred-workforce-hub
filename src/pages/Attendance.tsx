@@ -98,12 +98,41 @@ export default function AttendancePage() {
 
     setRecords(recordsRes.data || []);
     setProfiles(profilesRes.data || []);
+    if (isAdmin && profilesRes.data) setAllProfiles(profilesRes.data as Profile[]);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
   }, [user, period, isAdmin]);
+
+  const addAttendance = async () => {
+    if (!addUserId) {
+      toast({ title: "Select an employee", variant: "destructive" });
+      return;
+    }
+    const insert: any = {
+      user_id: addUserId,
+      date: addDate,
+      status: addStatus,
+      break_duration_ms: 0,
+    };
+    if (addCheckIn) insert.check_in_time = new Date(`${addDate}T${addCheckIn}`).toISOString();
+    if (addCheckOut) insert.check_out_time = new Date(`${addDate}T${addCheckOut}`).toISOString();
+
+    const { error } = await supabase.from("attendance_records").insert(insert);
+    if (error) {
+      toast({ title: "Failed to add", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Attendance added" });
+      setAddOpen(false);
+      setAddUserId("");
+      setAddCheckIn("");
+      setAddCheckOut("");
+      setAddStatus("checked_in");
+      fetchData();
+    }
+  };
 
   const getName = (userId: string) => {
     const p = profiles.find((p) => p.user_id === userId);
