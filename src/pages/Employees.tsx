@@ -14,6 +14,7 @@ type EmployeeRow = {
   user_id: string;
   full_name: string | null;
   email: string | null;
+  hourly_rate: number;
   role: string;
 };
 
