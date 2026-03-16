@@ -121,6 +121,12 @@ export default function ReportsPage() {
         <StatCard title="Total Payroll" value={`$${totalPayroll.toLocaleString()}`} icon={DollarSign} variant="warning" />
       </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
+        <StatCard title="Total Paid" value={`$${totalPaid.toLocaleString()}`} icon={CheckCircle} variant="success" />
+        <StatCard title="Remaining" value={`$${totalRemaining.toLocaleString()}`} icon={DollarSign} variant="default" />
+        <StatCard title="Avg Hours/Employee" value={(totalHoursWorked / totalEmployees).toFixed(1)} icon={Clock} variant="accent" />
+      </div>
+
       {/* Attendance Summary */}
       <div className="rounded-md border bg-card shadow-sm mb-6">
         <div className="flex items-center justify-between border-b px-5 py-3">
