@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { StatCard } from "@/components/StatCard";
-import { Clock, UserCheck, AlertTriangle, CalendarDays, Pencil, Save, X, Plus } from "lucide-react";
+import { Clock, UserCheck, AlertTriangle, CalendarDays, Pencil, Save, X, Plus, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -189,6 +189,17 @@ export default function AttendancePage() {
     }
   };
 
+  const deleteRecord = async (recordId: string) => {
+    if (!confirm("Delete this attendance record?")) return;
+    const { error } = await supabase.from("attendance_records").delete().eq("id", recordId);
+    if (error) {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Record deleted" });
+      fetchData();
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="page-header flex-wrap gap-3">
@@ -355,9 +366,14 @@ export default function AttendancePage() {
                             </Button>
                           </div>
                         ) : (
-                          <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="flex gap-1.5">
+                            <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => deleteRecord(r.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         )}
                       </td>
                     )}
