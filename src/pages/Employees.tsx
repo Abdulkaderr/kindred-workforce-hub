@@ -31,6 +31,7 @@ export default function EmployeesPage() {
   const [addName, setAddName] = useState("");
   const [addPassword, setAddPassword] = useState("");
   const [addRole, setAddRole] = useState<"employee" | "admin">("employee");
+  const [addRate, setAddRate] = useState("");
   const [addLoading, setAddLoading] = useState(false);
 
   // Edit employee modal
