@@ -155,9 +155,16 @@ export default function EmployeesPage() {
   const handleChangePassword = async () => {
     if (!pwEmployee || !newPassword) return;
     setPwLoading(true);
-    // Note: changing another user's password requires admin API (edge function).
-    // For now we show a message that this requires backend admin access.
-    toast({ title: "Password change", description: "Password changes for other users require backend admin access. Please use the backend panel.", variant: "destructive" });
+
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: { action: "change_password", user_id: pwEmployee.user_id, password: newPassword },
+    });
+
+    if (error || data?.error) {
+      toast({ title: "Password change failed", description: data?.error || error?.message, variant: "destructive" });
+    } else {
+      toast({ title: "Password updated" });
+    }
     setPwLoading(false);
     setPwOpen(false);
   };
