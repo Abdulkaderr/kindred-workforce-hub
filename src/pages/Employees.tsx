@@ -155,6 +155,7 @@ export default function EmployeesPage() {
     setEditEmployee(emp);
     setEditName(emp.full_name || "");
     setEditRole(emp.role as "employee" | "admin");
+    setEditRate(String(emp.hourly_rate || 0));
     setEditOpen(true);
   };
 
