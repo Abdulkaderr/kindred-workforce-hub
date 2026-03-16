@@ -39,6 +39,7 @@ export default function EmployeesPage() {
   const [editEmployee, setEditEmployee] = useState<EmployeeRow | null>(null);
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<"employee" | "admin">("employee");
+  const [editRate, setEditRate] = useState("");
   const [editLoading, setEditLoading] = useState(false);
 
   // Change password modal
