@@ -113,18 +113,18 @@ export default function PayrollPage() {
       }
     });
 
-    // Build rows
+    // Build rows — prefer stored payroll record values over recalculated ones
     const userIds = new Set([...Object.keys(hoursByUser), ...Object.keys(payrollByUser)]);
     const profileMap = new Map(profiles.map((p) => [p.user_id, p]));
 
     const computed: PayrollRow[] = [];
     userIds.forEach((uid) => {
       const profile = profileMap.get(uid);
-      const rate = Number(profile?.hourly_rate) || 0;
-      const totalHours = Math.round((hoursByUser[uid] || 0) * 10) / 10;
-      const totalSalary = Math.round(rate * totalHours * 100) / 100;
       const pr = payrollByUser[uid];
-      // Always preserve existing paid amount — never overwrite
+      const rate = pr ? Number(pr.hourly_rate) : (Number(profile?.hourly_rate) || 0);
+      // Use stored payroll values if available, otherwise calculate from attendance
+      const totalHours = pr ? Number(pr.total_hours) : Math.round((hoursByUser[uid] || 0) * 10) / 10;
+      const totalSalary = pr ? Number(pr.total_salary) : Math.round(rate * totalHours * 100) / 100;
       const paid = pr ? Number(pr.paid_amount) : 0;
       const remaining = Math.max(0, totalSalary - paid);
       const status: PayrollRow["status"] = remaining <= 0 && totalSalary > 0 ? "Paid" : paid > 0 ? "Partial" : "Pending";
