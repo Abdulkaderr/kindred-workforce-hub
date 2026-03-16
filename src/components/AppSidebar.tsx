@@ -2,7 +2,6 @@ import { NavLink as RouterNavLink } from "react-router-dom";
 import { LucideIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   LayoutDashboard,
-  Building2,
   Users,
   Clock,
   DollarSign,
@@ -22,7 +21,6 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, section: "Overview" },
-  { title: "Companies", url: "/companies", icon: Building2, section: "Overview" },
   { title: "Employees", url: "/employees", icon: Users, section: "Management" },
   { title: "Attendance", url: "/attendance", icon: Clock, section: "Management" },
   { title: "Payroll", url: "/payroll", icon: DollarSign, section: "Management" },

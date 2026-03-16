@@ -1,7 +1,6 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { StatCard } from "@/components/StatCard";
 import {
-  Building2,
   Users,
   Clock,
   UserCheck,
@@ -33,24 +32,23 @@ const Index = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Platform overview and live activity</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Admin overview and live activity</p>
         </div>
         <p className="mono text-muted-foreground">
           {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
         </p>
       </div>
 
-      {/* Platform Stats */}
+      {/* Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatCard title="Total Companies" value={12} icon={Building2} trend={{ value: "+2 this month", positive: true }} />
         <StatCard title="Total Employees" value={847} icon={Users} trend={{ value: "+34 this month", positive: true }} variant="accent" />
         <StatCard title="Active Today" value={623} icon={UserCheck} variant="success" />
         <StatCard title="Total Payroll" value="$284,500" icon={DollarSign} variant="default" />
+        <StatCard title="Currently Working" value={412} icon={Clock} variant="accent" />
       </div>
 
       {/* Live Activity Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatCard title="Currently Working" value={412} icon={Clock} variant="accent" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
         <StatCard title="Late Today" value={18} icon={AlertTriangle} variant="warning" />
         <StatCard title="Absent Today" value={42} icon={UserX} variant="default" />
         <StatCard title="Finished Work" value={173} icon={CheckCircle} variant="success" />
