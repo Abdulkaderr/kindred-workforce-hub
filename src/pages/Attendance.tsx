@@ -189,6 +189,17 @@ export default function AttendancePage() {
     }
   };
 
+  const deleteRecord = async (recordId: string) => {
+    if (!confirm("Delete this attendance record?")) return;
+    const { error } = await supabase.from("attendance_records").delete().eq("id", recordId);
+    if (error) {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Record deleted" });
+      fetchData();
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="page-header flex-wrap gap-3">
