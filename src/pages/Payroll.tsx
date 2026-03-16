@@ -12,64 +12,129 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-type PayrollRecord = {
-  id: string;
-  user_id: string;
-  period_type: string;
-  period_start: string;
-  period_end: string;
-  total_hours: number;
-  hourly_rate: number;
-  total_salary: number;
-  paid_amount: number;
-  status: string;
-};
-
 type Profile = {
   user_id: string;
   full_name: string | null;
   email: string | null;
+  hourly_rate: number;
+};
+
+type PayrollRow = {
+  user_id: string;
+  name: string;
+  rate: number;
+  totalHours: number;
+  totalSalary: number;
+  paid: number;
+  remaining: number;
+  status: "Paid" | "Partial" | "Pending";
+  payrollId: string | null; // existing payroll_records id
 };
 
 type Period = "weekly" | "monthly" | "yearly";
 
 const periodLabels: Record<Period, string> = { weekly: "Weekly", monthly: "Monthly", yearly: "Yearly" };
 
+function getPeriodRange(period: Period): { start: string; end: string } {
+  const now = new Date();
+  const end = now.toISOString().split("T")[0];
+  let from: Date;
+  if (period === "weekly") {
+    from = new Date(now); from.setDate(now.getDate() - 7);
+  } else if (period === "monthly") {
+    from = new Date(now); from.setMonth(now.getMonth() - 1);
+  } else {
+    from = new Date(now); from.setFullYear(now.getFullYear() - 1);
+  }
+  return { start: from.toISOString().split("T")[0], end };
+}
+
 export default function PayrollPage() {
   const { role, user } = useAuth();
   const isAdmin = role === "admin";
   const [period, setPeriod] = useState<Period>("monthly");
-  const [records, setRecords] = useState<PayrollRecord[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [rows, setRows] = useState<PayrollRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"pay_remaining" | "make_payment">("make_payment");
-  const [selectedRecord, setSelectedRecord] = useState<PayrollRecord | null>(null);
+  const [selectedRow, setSelectedRow] = useState<PayrollRow | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentNotes, setPaymentNotes] = useState("");
 
   const fetchData = async () => {
     if (!user) return;
     setLoading(true);
+    const { start, end } = getPeriodRange(period);
 
-    let query = supabase
-      .from("payroll_records")
-      .select("*")
-      .eq("period_type", period)
-      .order("period_start", { ascending: false });
+    // Fetch attendance, profiles, and existing payroll records in parallel
+    const attendanceQuery = isAdmin
+      ? supabase.from("attendance_records").select("*").gte("date", start).lte("date", end)
+      : supabase.from("attendance_records").select("*").eq("user_id", user.id).gte("date", start).lte("date", end);
 
-    if (!isAdmin) {
-      query = query.eq("user_id", user.id);
-    }
+    const payrollQuery = isAdmin
+      ? supabase.from("payroll_records").select("*").eq("period_type", period)
+      : supabase.from("payroll_records").select("*").eq("user_id", user.id).eq("period_type", period);
 
-    const [recordsRes, profilesRes] = await Promise.all([
-      query,
-      isAdmin ? supabase.from("profiles").select("user_id, full_name, email") : Promise.resolve({ data: [] }),
+    const [attendanceRes, profilesRes, payrollRes] = await Promise.all([
+      attendanceQuery,
+      isAdmin
+        ? supabase.from("profiles").select("user_id, full_name, email, hourly_rate")
+        : supabase.from("profiles").select("user_id, full_name, email, hourly_rate").eq("user_id", user.id),
+      payrollQuery,
     ]);
 
-    setRecords(recordsRes.data || []);
-    setProfiles(profilesRes.data || []);
+    const attendance = attendanceRes.data || [];
+    const profiles = (profilesRes.data || []) as Profile[];
+    const payrollRecords = payrollRes.data || [];
+
+    // Calculate hours per user from attendance
+    const hoursByUser: Record<string, number> = {};
+    attendance.forEach((r: any) => {
+      if (!r.check_in_time || !r.check_out_time) return;
+      const diff = new Date(r.check_out_time).getTime() - new Date(r.check_in_time).getTime();
+      const hours = Math.max(0, (diff - (r.break_duration_ms || 0)) / 3600000);
+      hoursByUser[r.user_id] = (hoursByUser[r.user_id] || 0) + hours;
+    });
+
+    // Map payroll records by user_id for quick lookup
+    const payrollByUser: Record<string, any> = {};
+    payrollRecords.forEach((pr: any) => {
+      // Use most recent record per user
+      if (!payrollByUser[pr.user_id] || pr.created_at > payrollByUser[pr.user_id].created_at) {
+        payrollByUser[pr.user_id] = pr;
+      }
+    });
+
+    // Build rows from profiles that have attendance or payroll data
+    const userIds = new Set([...Object.keys(hoursByUser), ...Object.keys(payrollByUser)]);
+    const profileMap = new Map(profiles.map((p) => [p.user_id, p]));
+
+    const computed: PayrollRow[] = [];
+    userIds.forEach((uid) => {
+      const profile = profileMap.get(uid);
+      const rate = Number(profile?.hourly_rate) || 0;
+      const totalHours = Math.round((hoursByUser[uid] || 0) * 10) / 10;
+      const totalSalary = Math.round(rate * totalHours * 100) / 100;
+      const pr = payrollByUser[uid];
+      const paid = pr ? Number(pr.paid_amount) : 0;
+      const remaining = Math.max(0, totalSalary - paid);
+      const status: PayrollRow["status"] = remaining <= 0 && totalSalary > 0 ? "Paid" : paid > 0 ? "Partial" : "Pending";
+
+      computed.push({
+        user_id: uid,
+        name: profile?.full_name || profile?.email?.split("@")[0] || uid.slice(0, 8) + "...",
+        rate,
+        totalHours,
+        totalSalary,
+        paid,
+        remaining,
+        status,
+        payrollId: pr?.id || null,
+      });
+    });
+
+    setRows(computed);
     setLoading(false);
   };
 
@@ -77,101 +142,114 @@ export default function PayrollPage() {
     fetchData();
   }, [user, period, isAdmin]);
 
-  const getName = (userId: string) => {
-    const p = profiles.find((p) => p.user_id === userId);
-    return p?.full_name || p?.email?.split("@")[0] || userId.slice(0, 8) + "...";
-  };
+  const totalSalary = rows.reduce((s, r) => s + r.totalSalary, 0);
+  const totalPaid = rows.reduce((s, r) => s + r.paid, 0);
+  const totalRemaining = rows.reduce((s, r) => s + r.remaining, 0);
+  const overdue = rows.filter((r) => r.status === "Pending").reduce((s, r) => s + r.remaining, 0);
 
-  const totalSalary = records.reduce((s, p) => s + Number(p.total_salary), 0);
-  const totalPaid = records.reduce((s, p) => s + Number(p.paid_amount), 0);
-  const totalRemaining = totalSalary - totalPaid;
-  const overdue = records.filter(p => p.status === "pending").reduce((s, p) => s + (Number(p.total_salary) - Number(p.paid_amount)), 0);
-
-  const openModal = (record: PayrollRecord, type: "pay_remaining" | "make_payment") => {
-    setSelectedRecord(record);
+  const openModal = (row: PayrollRow, type: "pay_remaining" | "make_payment") => {
+    setSelectedRow(row);
     setModalType(type);
-    const remaining = Number(record.total_salary) - Number(record.paid_amount);
-    setPaymentAmount(type === "pay_remaining" ? remaining.toString() : "");
+    setPaymentAmount(type === "pay_remaining" ? row.remaining.toString() : "");
     setPaymentNotes("");
     setModalOpen(true);
   };
 
   const handleSubmitPayment = async () => {
-    if (!selectedRecord || !paymentAmount) return;
+    if (!selectedRow || !paymentAmount) return;
     const amount = Number(paymentAmount);
-    const newPaid = Number(selectedRecord.paid_amount) + amount;
-    const remaining = Number(selectedRecord.total_salary) - newPaid;
-    const newStatus = remaining <= 0 ? "paid" : "partial";
+    if (amount <= 0) return;
 
-    const { error } = await supabase
-      .from("payroll_records")
-      .update({ paid_amount: newPaid, status: newStatus })
-      .eq("id", selectedRecord.id);
+    const { start, end } = getPeriodRange(period);
+    const newPaid = selectedRow.paid + amount;
+    const newRemaining = Math.max(0, selectedRow.totalSalary - newPaid);
+    const newStatus = newRemaining <= 0 ? "paid" : "partial";
 
-    if (error) {
-      toast({ title: "Payment failed", description: error.message, variant: "destructive" });
+    if (selectedRow.payrollId) {
+      // Update existing record
+      const { error } = await supabase
+        .from("payroll_records")
+        .update({
+          paid_amount: newPaid,
+          status: newStatus,
+          total_hours: selectedRow.totalHours,
+          hourly_rate: selectedRow.rate,
+          total_salary: selectedRow.totalSalary,
+        })
+        .eq("id", selectedRow.payrollId);
+
+      if (error) {
+        toast({ title: "Payment failed", description: error.message, variant: "destructive" });
+        return;
+      }
     } else {
-      toast({ title: "Payment Recorded", description: `$${amount.toLocaleString()} payment recorded.` });
-      setModalOpen(false);
-      fetchData();
+      // Create new payroll record
+      const { error } = await supabase.from("payroll_records").insert({
+        user_id: selectedRow.user_id,
+        period_type: period,
+        period_start: start,
+        period_end: end,
+        total_hours: selectedRow.totalHours,
+        hourly_rate: selectedRow.rate,
+        total_salary: selectedRow.totalSalary,
+        paid_amount: amount,
+        status: newStatus,
+      });
+
+      if (error) {
+        toast({ title: "Payment failed", description: error.message, variant: "destructive" });
+        return;
+      }
     }
+
+    toast({ title: "Payment Recorded", description: `$${amount.toLocaleString()} payment recorded.` });
+    setModalOpen(false);
+    fetchData();
   };
 
   const handleGeneratePayroll = async () => {
-    // Generate payroll records from attendance data for all employees
-    const now = new Date();
-    let periodStart: Date, periodEnd: Date;
+    const { start, end } = getPeriodRange(period);
 
-    if (period === "weekly") {
-      periodEnd = new Date(now);
-      periodStart = new Date(now);
-      periodStart.setDate(now.getDate() - 7);
-    } else if (period === "monthly") {
-      periodEnd = new Date(now);
-      periodStart = new Date(now);
-      periodStart.setMonth(now.getMonth() - 1);
-    } else {
-      periodEnd = new Date(now);
-      periodStart = new Date(now);
-      periodStart.setFullYear(now.getFullYear() - 1);
-    }
-
-    const startStr = periodStart.toISOString().split("T")[0];
-    const endStr = periodEnd.toISOString().split("T")[0];
-
-    // Get attendance records
+    // Get attendance records for all employees in period
     const { data: attendance } = await supabase
       .from("attendance_records")
       .select("*")
-      .gte("date", startStr)
-      .lte("date", endStr);
+      .gte("date", start)
+      .lte("date", end);
 
     if (!attendance || attendance.length === 0) {
       toast({ title: "No attendance data", description: "No attendance records found for this period.", variant: "destructive" });
       return;
     }
 
-    // Group by user
-    const byUser: Record<string, number> = {};
-    attendance.forEach((r) => {
+    // Get all profiles for rates
+    const { data: profiles } = await supabase.from("profiles").select("user_id, hourly_rate");
+    const rateMap = new Map((profiles || []).map((p: any) => [p.user_id, Number(p.hourly_rate) || 0]));
+
+    // Calculate hours per user
+    const hoursByUser: Record<string, number> = {};
+    attendance.forEach((r: any) => {
       if (!r.check_in_time || !r.check_out_time) return;
       const diff = new Date(r.check_out_time).getTime() - new Date(r.check_in_time).getTime();
       const hours = Math.max(0, (diff - (r.break_duration_ms || 0)) / 3600000);
-      byUser[r.user_id] = (byUser[r.user_id] || 0) + hours;
+      hoursByUser[r.user_id] = (hoursByUser[r.user_id] || 0) + hours;
     });
 
-    const defaultRate = 25; // Default hourly rate
-    const inserts = Object.entries(byUser).map(([userId, hours]) => ({
-      user_id: userId,
-      period_type: period,
-      period_start: startStr,
-      period_end: endStr,
-      total_hours: Math.round(hours * 10) / 10,
-      hourly_rate: defaultRate,
-      total_salary: Math.round(hours * defaultRate * 100) / 100,
-      paid_amount: 0,
-      status: "pending",
-    }));
+    const inserts = Object.entries(hoursByUser).map(([userId, hours]) => {
+      const rate = rateMap.get(userId) || 0;
+      const totalHours = Math.round(hours * 10) / 10;
+      return {
+        user_id: userId,
+        period_type: period,
+        period_start: start,
+        period_end: end,
+        total_hours: totalHours,
+        hourly_rate: rate,
+        total_salary: Math.round(totalHours * rate * 100) / 100,
+        paid_amount: 0,
+        status: "pending",
+      };
+    });
 
     const { error } = await supabase.from("payroll_records").insert(inserts);
     if (error) {
@@ -212,18 +290,18 @@ export default function PayrollPage() {
       <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
         {loading ? (
           <p className="px-5 py-6 text-sm text-muted-foreground text-center">Loading...</p>
-        ) : records.length === 0 ? (
+        ) : rows.length === 0 ? (
           <p className="px-5 py-6 text-sm text-muted-foreground text-center">
-            No payroll records. {isAdmin ? "Click 'Generate Payroll' to create records from attendance data." : ""}
+            No payroll data. {isAdmin ? "Click 'Generate Payroll' to create records from attendance data." : ""}
           </p>
         ) : (
           <table className="data-table">
             <thead>
               <tr>
-                <th>Employee</th>
+                <th>Employee Name</th>
+                <th>Rate</th>
                 <th>Period</th>
                 <th>Total Hours</th>
-                <th>Rate</th>
                 <th>Total Salary</th>
                 <th>Paid</th>
                 <th>Remaining</th>
@@ -232,43 +310,40 @@ export default function PayrollPage() {
               </tr>
             </thead>
             <tbody>
-              {records.map((p) => {
-                const remaining = Number(p.total_salary) - Number(p.paid_amount);
-                return (
-                  <tr key={p.id}>
-                    <td className="font-medium">{isAdmin ? getName(p.user_id) : (user?.user_metadata?.full_name || "Me")}</td>
-                    <td className="mono text-xs">{p.period_start} → {p.period_end}</td>
-                    <td className="mono">{Number(p.total_hours).toFixed(1)}</td>
-                    <td className="mono">${Number(p.hourly_rate)}/hr</td>
-                    <td className="mono font-medium">${Number(p.total_salary).toLocaleString()}</td>
-                    <td className="mono text-success">${Number(p.paid_amount).toLocaleString()}</td>
-                    <td className="mono">
-                      {remaining > 0 ? <span className="text-warning">${remaining.toLocaleString()}</span> : "$0"}
-                    </td>
+              {rows.map((r) => (
+                <tr key={r.user_id}>
+                  <td className="font-medium">{r.name}</td>
+                  <td className="mono">${r.rate}/hr</td>
+                  <td className="mono text-xs">{getPeriodRange(period).start} → {getPeriodRange(period).end}</td>
+                  <td className="mono">{r.totalHours.toFixed(1)}</td>
+                  <td className="mono font-medium">${r.totalSalary.toLocaleString()}</td>
+                  <td className="mono text-success">${r.paid.toLocaleString()}</td>
+                  <td className="mono">
+                    {r.remaining > 0 ? <span className="text-warning">${r.remaining.toLocaleString()}</span> : "$0"}
+                  </td>
+                  <td>
+                    <span className={`status-badge ${r.status === "Paid" ? "status-completed" : r.status === "Partial" ? "status-pending" : "status-late"}`}>
+                      {r.status}
+                    </span>
+                  </td>
+                  {isAdmin && (
                     <td>
-                      <span className={`status-badge ${p.status === "paid" ? "status-completed" : p.status === "partial" ? "status-pending" : "status-late"}`}>
-                        {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
-                      </span>
+                      {r.status !== "Paid" ? (
+                        <div className="flex gap-1.5">
+                          <Button size="sm" variant="outline" onClick={() => openModal(r, "pay_remaining")}>
+                            Pay Remaining
+                          </Button>
+                          <Button size="sm" variant="default" onClick={() => openModal(r, "make_payment")}>
+                            Make Payment
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Completed</span>
+                      )}
                     </td>
-                    {isAdmin && (
-                      <td>
-                        {p.status !== "paid" ? (
-                          <div className="flex gap-1.5">
-                            <Button size="sm" variant="outline" onClick={() => openModal(p, "pay_remaining")}>
-                              Pay Remaining
-                            </Button>
-                            <Button size="sm" variant="default" onClick={() => openModal(p, "make_payment")}>
-                              Make Payment
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Completed</span>
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
+                  )}
+                </tr>
+              ))}
             </tbody>
           </table>
         )}
@@ -282,23 +357,31 @@ export default function PayrollPage() {
               {modalType === "pay_remaining" ? "Pay Remaining Balance" : "Make Payment"}
             </DialogTitle>
             <DialogDescription>
-              {selectedRecord && `Recording payment for ${getName(selectedRecord.user_id)}`}
+              {selectedRow && `Recording payment for ${selectedRow.name}`}
             </DialogDescription>
           </DialogHeader>
-          {selectedRecord && (
+          {selectedRow && (
             <div className="space-y-4">
               <div className="rounded-md bg-muted p-3 text-sm space-y-1">
                 <div className="flex justify-between">
+                  <span className="text-muted-foreground">Rate</span>
+                  <span className="font-medium">${selectedRow.rate}/hr</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Hours</span>
+                  <span className="font-medium">{selectedRow.totalHours.toFixed(1)}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Salary</span>
-                  <span className="font-medium">${Number(selectedRecord.total_salary).toLocaleString()}</span>
+                  <span className="font-medium">${selectedRow.totalSalary.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Already Paid</span>
-                  <span className="text-success font-medium">${Number(selectedRecord.paid_amount).toLocaleString()}</span>
+                  <span className="text-success font-medium">${selectedRow.paid.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Remaining</span>
-                  <span className="text-warning font-medium">${(Number(selectedRecord.total_salary) - Number(selectedRecord.paid_amount)).toLocaleString()}</span>
+                  <span className="text-warning font-medium">${selectedRow.remaining.toLocaleString()}</span>
                 </div>
               </div>
               <div className="space-y-2">

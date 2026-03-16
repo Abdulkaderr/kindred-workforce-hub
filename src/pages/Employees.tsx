@@ -312,6 +312,10 @@ export default function EmployeesPage() {
               <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
             </div>
             <div className="space-y-2">
+              <Label>Hourly Rate ($)</Label>
+              <Input type="number" min="0" step="0.01" value={editRate} onChange={(e) => setEditRate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
               <Label>Role</Label>
               <Select value={editRole} onValueChange={(v) => setEditRole(v as any)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
