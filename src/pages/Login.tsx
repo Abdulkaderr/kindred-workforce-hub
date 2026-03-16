@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, Eye, EyeOff } from "lucide-react";
+import { Clock, Eye, EyeOff, ArrowRight, UserPlus, LogIn as LogInIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export default function LoginPage() {
@@ -58,41 +58,74 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen">
-      <div className="hidden lg:flex lg:w-1/2 items-center justify-center bg-primary">
-        <div className="max-w-md text-center px-8">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="rounded-lg bg-primary-foreground/10 p-3">
-              <Clock className="h-10 w-10 text-primary-foreground" />
+    <div className="flex min-h-screen bg-background">
+      {/* Left panel - branding (desktop) */}
+      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-accent" />
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-20 -left-10 h-72 w-72 rounded-full bg-white/20 blur-3xl" />
+          <div className="absolute bottom-20 right-10 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
+        </div>
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-white/10 backdrop-blur-sm p-2.5 border border-white/20">
+              <Clock className="h-7 w-7 text-white" />
             </div>
+            <span className="text-xl font-bold text-white">WorkforceOS</span>
           </div>
-          <h1 className="text-3xl font-bold text-primary-foreground mb-3">WorkforceOS</h1>
-          <p className="text-primary-foreground/70 text-sm leading-relaxed">
-            {t("login.brandDescription")}
-          </p>
+          
+          <div className="max-w-md">
+            <h1 className="text-4xl font-bold text-white leading-tight mb-4">
+              {t("login.brandDescription").split("—")[0]}
+            </h1>
+            <p className="text-white/60 text-base leading-relaxed">
+              — {t("login.brandDescription").split("—")[1]?.trim() || "all in one platform."}
+            </p>
+          </div>
+
+          <div className="flex gap-6">
+            {[
+              { label: "Employees", value: "500+" },
+              { label: "Companies", value: "50+" },
+              { label: "Uptime", value: "99.9%" },
+            ].map((stat) => (
+              <div key={stat.label} className="text-white/80">
+                <p className="text-2xl font-bold text-white">{stat.value}</p>
+                <p className="text-sm text-white/50">{stat.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="flex w-full lg:w-1/2 items-center justify-center bg-background px-6">
-        <div className="w-full max-w-sm space-y-6">
-          <div className="lg:hidden flex items-center gap-2 justify-center mb-4">
-            <Clock className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold text-foreground">WorkforceOS</span>
+      {/* Right panel - form */}
+      <div className="flex w-full lg:w-[55%] items-center justify-center px-5 py-8">
+        <div className="w-full max-w-[420px] space-y-8">
+          {/* Mobile header */}
+          <div className="lg:hidden">
+            <div className="flex items-center gap-2.5 mb-8">
+              <div className="rounded-xl bg-primary p-2 border border-primary/20">
+                <Clock className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <span className="text-lg font-bold text-foreground">WorkforceOS</span>
+            </div>
           </div>
 
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold text-foreground">
+          {/* Header */}
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
               {isSignUp ? t("login.createAccount") : t("login.welcomeBack")}
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
               {isSignUp ? t("login.signUpToStart") : t("login.signInToAccount")}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
             {isSignUp && (
               <div className="space-y-2">
-                <Label htmlFor="fullName">{t("login.fullName")}</Label>
+                <Label htmlFor="fullName" className="text-sm font-medium">{t("login.fullName")}</Label>
                 <Input
                   id="fullName"
                   type="text"
@@ -100,12 +133,13 @@ export default function LoginPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
+                  className="h-12 rounded-xl bg-muted/50 border-border/50 px-4 text-sm transition-all focus:bg-background focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">{t("login.email")}</Label>
+              <Label htmlFor="email" className="text-sm font-medium">{t("login.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -113,11 +147,22 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="h-12 rounded-xl bg-muted/50 border-border/50 px-4 text-sm transition-all focus:bg-background focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">{t("login.password")}</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-sm font-medium">{t("login.password")}</Label>
+                {!isSignUp && (
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    {t("login.forgotPassword")}
+                  </Link>
+                )}
+              </div>
               <div className="relative">
                 <Input
                   id="password"
@@ -127,29 +172,55 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
+                  className="h-12 rounded-xl bg-muted/50 border-border/50 px-4 pr-12 text-sm transition-all focus:bg-background focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? t("login.pleaseWait") : isSignUp ? t("login.createAccountBtn") : t("login.signIn")}
+            <Button
+              type="submit"
+              className="w-full h-12 rounded-xl text-sm font-semibold gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+              disabled={loading}
+            >
+              {loading ? (
+                t("login.pleaseWait")
+              ) : isSignUp ? (
+                <>
+                  <UserPlus className="h-4 w-4" />
+                  {t("login.createAccountBtn")}
+                </>
+              ) : (
+                <>
+                  <LogInIcon className="h-4 w-4" />
+                  {t("login.signIn")}
+                </>
+              )}
             </Button>
           </form>
 
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border/50" />
+            </div>
+          </div>
+
+          {/* Toggle */}
           <p className="text-center text-sm text-muted-foreground">
             {isSignUp ? t("login.alreadyHaveAccount") : t("login.dontHaveAccount")}{" "}
             <button
               onClick={() => setIsSignUp(!isSignUp)}
-              className="font-medium text-primary hover:underline"
+              className="font-semibold text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1"
             >
               {isSignUp ? t("login.signInLink") : t("login.signUpLink")}
+              <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </p>
         </div>
