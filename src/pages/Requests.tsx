@@ -91,7 +91,7 @@ export default function RequestsPage() {
         </div>
       </div>
 
-      <div className="rounded-md border bg-card shadow-sm">
+      <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
         {loading ? (
           <p className="px-5 py-6 text-sm text-muted-foreground text-center">Loading...</p>
         ) : requests.length === 0 ? (

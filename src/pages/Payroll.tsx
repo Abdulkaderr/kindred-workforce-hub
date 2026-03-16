@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { StatCard } from "@/components/StatCard";
 import { DollarSign, CheckCircle, Clock, AlertTriangle } from "lucide-react";
@@ -8,97 +8,197 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 type PayrollRecord = {
-  employee: string;
-  totalHours: number;
-  paidHours: number;
-  remainingHours: number;
-  rate: number;
-  totalSalary: number;
-  paidAmount: number;
-  remainingAmount: number;
+  id: string;
+  user_id: string;
+  period_type: string;
+  period_start: string;
+  period_end: string;
+  total_hours: number;
+  hourly_rate: number;
+  total_salary: number;
+  paid_amount: number;
   status: string;
-  period: "weekly" | "monthly" | "yearly";
 };
 
-const payrollData: PayrollRecord[] = [
-  // Monthly records
-  { employee: "Sarah Johnson", totalHours: 176.5, paidHours: 176.5, remainingHours: 0, rate: 45, totalSalary: 7942.5, paidAmount: 7942.5, remainingAmount: 0, status: "paid", period: "monthly" },
-  { employee: "Mike Chen", totalHours: 168.0, paidHours: 168.0, remainingHours: 0, rate: 40, totalSalary: 6720, paidAmount: 6720, remainingAmount: 0, status: "paid", period: "monthly" },
-  { employee: "Lisa Park", totalHours: 184.0, paidHours: 92.0, remainingHours: 92.0, rate: 55, totalSalary: 10120, paidAmount: 5060, remainingAmount: 5060, status: "partial", period: "monthly" },
-  { employee: "James Wilson", totalHours: 152.0, paidHours: 0, remainingHours: 152.0, rate: 50, totalSalary: 7600, paidAmount: 0, remainingAmount: 7600, status: "pending", period: "monthly" },
-  { employee: "Emma Davis", totalHours: 172.0, paidHours: 172.0, remainingHours: 0, rate: 42, totalSalary: 7224, paidAmount: 7224, remainingAmount: 0, status: "paid", period: "monthly" },
-  // Weekly records
-  { employee: "Sarah Johnson", totalHours: 42.0, paidHours: 42.0, remainingHours: 0, rate: 45, totalSalary: 1890, paidAmount: 1890, remainingAmount: 0, status: "paid", period: "weekly" },
-  { employee: "Mike Chen", totalHours: 40.0, paidHours: 40.0, remainingHours: 0, rate: 40, totalSalary: 1600, paidAmount: 1600, remainingAmount: 0, status: "paid", period: "weekly" },
-  { employee: "Lisa Park", totalHours: 44.0, paidHours: 22.0, remainingHours: 22.0, rate: 55, totalSalary: 2420, paidAmount: 1210, remainingAmount: 1210, status: "partial", period: "weekly" },
-  { employee: "James Wilson", totalHours: 38.0, paidHours: 0, remainingHours: 38.0, rate: 50, totalSalary: 1900, paidAmount: 0, remainingAmount: 1900, status: "pending", period: "weekly" },
-  { employee: "Emma Davis", totalHours: 41.0, paidHours: 41.0, remainingHours: 0, rate: 42, totalSalary: 1722, paidAmount: 1722, remainingAmount: 0, status: "paid", period: "weekly" },
-  // Yearly records
-  { employee: "Sarah Johnson", totalHours: 2100.0, paidHours: 2100.0, remainingHours: 0, rate: 45, totalSalary: 94500, paidAmount: 94500, remainingAmount: 0, status: "paid", period: "yearly" },
-  { employee: "Mike Chen", totalHours: 2016.0, paidHours: 2016.0, remainingHours: 0, rate: 40, totalSalary: 80640, paidAmount: 80640, remainingAmount: 0, status: "paid", period: "yearly" },
-  { employee: "Lisa Park", totalHours: 2208.0, paidHours: 1104.0, remainingHours: 1104.0, rate: 55, totalSalary: 121440, paidAmount: 60720, remainingAmount: 60720, status: "partial", period: "yearly" },
-  { employee: "James Wilson", totalHours: 1824.0, paidHours: 912.0, remainingHours: 912.0, rate: 50, totalSalary: 91200, paidAmount: 45600, remainingAmount: 45600, status: "partial", period: "yearly" },
-  { employee: "Emma Davis", totalHours: 2064.0, paidHours: 2064.0, remainingHours: 0, rate: 42, totalSalary: 86688, paidAmount: 86688, remainingAmount: 0, status: "paid", period: "yearly" },
-];
+type Profile = {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+};
 
-const periodLabels = { weekly: "Weekly", monthly: "Monthly", yearly: "Yearly" };
+type Period = "weekly" | "monthly" | "yearly";
+
+const periodLabels: Record<Period, string> = { weekly: "Weekly", monthly: "Monthly", yearly: "Yearly" };
 
 export default function PayrollPage() {
-  const [period, setPeriod] = useState<"weekly" | "monthly" | "yearly">("monthly");
+  const { role, user } = useAuth();
+  const isAdmin = role === "admin";
+  const [period, setPeriod] = useState<Period>("monthly");
+  const [records, setRecords] = useState<PayrollRecord[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"pay_remaining" | "make_payment">("make_payment");
-  const [selectedEmployee, setSelectedEmployee] = useState<PayrollRecord | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<PayrollRecord | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
   const [paymentNotes, setPaymentNotes] = useState("");
-  const { toast } = useToast();
 
-  const filtered = useMemo(() => payrollData.filter(p => p.period === period), [period]);
+  const fetchData = async () => {
+    if (!user) return;
+    setLoading(true);
 
-  const totalSalary = filtered.reduce((s, p) => s + p.totalSalary, 0);
-  const totalPaid = filtered.reduce((s, p) => s + p.paidAmount, 0);
-  const totalRemaining = filtered.reduce((s, p) => s + p.remainingAmount, 0);
-  const overdue = filtered.filter(p => p.status === "pending").reduce((s, p) => s + p.remainingAmount, 0);
+    let query = supabase
+      .from("payroll_records")
+      .select("*")
+      .eq("period_type", period)
+      .order("period_start", { ascending: false });
+
+    if (!isAdmin) {
+      query = query.eq("user_id", user.id);
+    }
+
+    const [recordsRes, profilesRes] = await Promise.all([
+      query,
+      isAdmin ? supabase.from("profiles").select("user_id, full_name, email") : Promise.resolve({ data: [] }),
+    ]);
+
+    setRecords(recordsRes.data || []);
+    setProfiles(profilesRes.data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [user, period, isAdmin]);
+
+  const getName = (userId: string) => {
+    const p = profiles.find((p) => p.user_id === userId);
+    return p?.full_name || p?.email?.split("@")[0] || userId.slice(0, 8) + "...";
+  };
+
+  const totalSalary = records.reduce((s, p) => s + Number(p.total_salary), 0);
+  const totalPaid = records.reduce((s, p) => s + Number(p.paid_amount), 0);
+  const totalRemaining = totalSalary - totalPaid;
+  const overdue = records.filter(p => p.status === "pending").reduce((s, p) => s + (Number(p.total_salary) - Number(p.paid_amount)), 0);
 
   const openModal = (record: PayrollRecord, type: "pay_remaining" | "make_payment") => {
-    setSelectedEmployee(record);
+    setSelectedRecord(record);
     setModalType(type);
-    setPaymentAmount(type === "pay_remaining" ? record.remainingAmount.toString() : "");
-    setPaymentDate(new Date().toISOString().split("T")[0]);
+    const remaining = Number(record.total_salary) - Number(record.paid_amount);
+    setPaymentAmount(type === "pay_remaining" ? remaining.toString() : "");
     setPaymentNotes("");
     setModalOpen(true);
   };
 
-  const handleSubmitPayment = () => {
-    toast({
-      title: "Payment Recorded",
-      description: `$${Number(paymentAmount).toLocaleString()} payment for ${selectedEmployee?.employee} has been recorded.`,
+  const handleSubmitPayment = async () => {
+    if (!selectedRecord || !paymentAmount) return;
+    const amount = Number(paymentAmount);
+    const newPaid = Number(selectedRecord.paid_amount) + amount;
+    const remaining = Number(selectedRecord.total_salary) - newPaid;
+    const newStatus = remaining <= 0 ? "paid" : "partial";
+
+    const { error } = await supabase
+      .from("payroll_records")
+      .update({ paid_amount: newPaid, status: newStatus })
+      .eq("id", selectedRecord.id);
+
+    if (error) {
+      toast({ title: "Payment failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Payment Recorded", description: `$${amount.toLocaleString()} payment recorded.` });
+      setModalOpen(false);
+      fetchData();
+    }
+  };
+
+  const handleGeneratePayroll = async () => {
+    // Generate payroll records from attendance data for all employees
+    const now = new Date();
+    let periodStart: Date, periodEnd: Date;
+
+    if (period === "weekly") {
+      periodEnd = new Date(now);
+      periodStart = new Date(now);
+      periodStart.setDate(now.getDate() - 7);
+    } else if (period === "monthly") {
+      periodEnd = new Date(now);
+      periodStart = new Date(now);
+      periodStart.setMonth(now.getMonth() - 1);
+    } else {
+      periodEnd = new Date(now);
+      periodStart = new Date(now);
+      periodStart.setFullYear(now.getFullYear() - 1);
+    }
+
+    const startStr = periodStart.toISOString().split("T")[0];
+    const endStr = periodEnd.toISOString().split("T")[0];
+
+    // Get attendance records
+    const { data: attendance } = await supabase
+      .from("attendance_records")
+      .select("*")
+      .gte("date", startStr)
+      .lte("date", endStr);
+
+    if (!attendance || attendance.length === 0) {
+      toast({ title: "No attendance data", description: "No attendance records found for this period.", variant: "destructive" });
+      return;
+    }
+
+    // Group by user
+    const byUser: Record<string, number> = {};
+    attendance.forEach((r) => {
+      if (!r.check_in_time || !r.check_out_time) return;
+      const diff = new Date(r.check_out_time).getTime() - new Date(r.check_in_time).getTime();
+      const hours = Math.max(0, (diff - (r.break_duration_ms || 0)) / 3600000);
+      byUser[r.user_id] = (byUser[r.user_id] || 0) + hours;
     });
-    setModalOpen(false);
+
+    const defaultRate = 25; // Default hourly rate
+    const inserts = Object.entries(byUser).map(([userId, hours]) => ({
+      user_id: userId,
+      period_type: period,
+      period_start: startStr,
+      period_end: endStr,
+      total_hours: Math.round(hours * 10) / 10,
+      hourly_rate: defaultRate,
+      total_salary: Math.round(hours * defaultRate * 100) / 100,
+      paid_amount: 0,
+      status: "pending",
+    }));
+
+    const { error } = await supabase.from("payroll_records").insert(inserts);
+    if (error) {
+      toast({ title: "Failed to generate payroll", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Payroll generated", description: `${inserts.length} payroll records created.` });
+      fetchData();
+    }
   };
 
   return (
     <DashboardLayout>
-      <div className="page-header">
+      <div className="page-header flex-wrap gap-3">
         <div>
           <h1 className="page-title">Payroll</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{periodLabels[period]} payroll management</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Select value={period} onValueChange={(v) => setPeriod(v as typeof period)}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="weekly">Weekly</SelectItem>
               <SelectItem value="monthly">Monthly</SelectItem>
               <SelectItem value="yearly">Yearly</SelectItem>
             </SelectContent>
           </Select>
-          <Button>Generate Payroll</Button>
+          {isAdmin && <Button onClick={handleGeneratePayroll}>Generate Payroll</Button>}
         </div>
       </div>
 
@@ -109,56 +209,69 @@ export default function PayrollPage() {
         <StatCard title="Overdue" value={`$${overdue.toLocaleString()}`} icon={AlertTriangle} variant="default" />
       </div>
 
-      <div className="rounded-md border bg-card shadow-sm">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Employee</th>
-              <th>Total Hours</th>
-              <th>Paid Hours</th>
-              <th>Remaining Hours</th>
-              <th>Rate</th>
-              <th>Total Salary</th>
-              <th>Paid Amount</th>
-              <th>Remaining</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p, i) => (
-              <tr key={i}>
-                <td className="font-medium">{p.employee}</td>
-                <td className="mono">{p.totalHours.toFixed(1)}</td>
-                <td className="mono text-success">{p.paidHours.toFixed(1)}</td>
-                <td className="mono">{p.remainingHours > 0 ? <span className="text-warning">{p.remainingHours.toFixed(1)}</span> : "0.0"}</td>
-                <td className="mono">${p.rate}/hr</td>
-                <td className="mono font-medium">${p.totalSalary.toLocaleString()}</td>
-                <td className="mono text-success">${p.paidAmount.toLocaleString()}</td>
-                <td className="mono">{p.remainingAmount > 0 ? <span className="text-warning">${p.remainingAmount.toLocaleString()}</span> : "$0"}</td>
-                <td>
-                  <span className={`status-badge ${p.status === "paid" ? "status-completed" : p.status === "partial" ? "status-pending" : "status-late"}`}>
-                    {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
-                  </span>
-                </td>
-                <td>
-                  {p.status !== "paid" ? (
-                    <div className="flex gap-1.5">
-                      <Button size="sm" variant="outline" onClick={() => openModal(p, "pay_remaining")}>
-                        Pay Remaining
-                      </Button>
-                      <Button size="sm" variant="default" onClick={() => openModal(p, "make_payment")}>
-                        Make Payment
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Completed</span>
-                  )}
-                </td>
+      <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
+        {loading ? (
+          <p className="px-5 py-6 text-sm text-muted-foreground text-center">Loading...</p>
+        ) : records.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-muted-foreground text-center">
+            No payroll records. {isAdmin ? "Click 'Generate Payroll' to create records from attendance data." : ""}
+          </p>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Period</th>
+                <th>Total Hours</th>
+                <th>Rate</th>
+                <th>Total Salary</th>
+                <th>Paid</th>
+                <th>Remaining</th>
+                <th>Status</th>
+                {isAdmin && <th>Actions</th>}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {records.map((p) => {
+                const remaining = Number(p.total_salary) - Number(p.paid_amount);
+                return (
+                  <tr key={p.id}>
+                    <td className="font-medium">{isAdmin ? getName(p.user_id) : (user?.user_metadata?.full_name || "Me")}</td>
+                    <td className="mono text-xs">{p.period_start} → {p.period_end}</td>
+                    <td className="mono">{Number(p.total_hours).toFixed(1)}</td>
+                    <td className="mono">${Number(p.hourly_rate)}/hr</td>
+                    <td className="mono font-medium">${Number(p.total_salary).toLocaleString()}</td>
+                    <td className="mono text-success">${Number(p.paid_amount).toLocaleString()}</td>
+                    <td className="mono">
+                      {remaining > 0 ? <span className="text-warning">${remaining.toLocaleString()}</span> : "$0"}
+                    </td>
+                    <td>
+                      <span className={`status-badge ${p.status === "paid" ? "status-completed" : p.status === "partial" ? "status-pending" : "status-late"}`}>
+                        {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
+                      </span>
+                    </td>
+                    {isAdmin && (
+                      <td>
+                        {p.status !== "paid" ? (
+                          <div className="flex gap-1.5">
+                            <Button size="sm" variant="outline" onClick={() => openModal(p, "pay_remaining")}>
+                              Pay Remaining
+                            </Button>
+                            <Button size="sm" variant="default" onClick={() => openModal(p, "make_payment")}>
+                              Make Payment
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Completed</span>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Payment Modal */}
@@ -169,23 +282,23 @@ export default function PayrollPage() {
               {modalType === "pay_remaining" ? "Pay Remaining Balance" : "Make Payment"}
             </DialogTitle>
             <DialogDescription>
-              {selectedEmployee && `Recording payment for ${selectedEmployee.employee}`}
+              {selectedRecord && `Recording payment for ${getName(selectedRecord.user_id)}`}
             </DialogDescription>
           </DialogHeader>
-          {selectedEmployee && (
+          {selectedRecord && (
             <div className="space-y-4">
               <div className="rounded-md bg-muted p-3 text-sm space-y-1">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Salary</span>
-                  <span className="font-medium">${selectedEmployee.totalSalary.toLocaleString()}</span>
+                  <span className="font-medium">${Number(selectedRecord.total_salary).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Already Paid</span>
-                  <span className="text-success font-medium">${selectedEmployee.paidAmount.toLocaleString()}</span>
+                  <span className="text-success font-medium">${Number(selectedRecord.paid_amount).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Remaining</span>
-                  <span className="text-warning font-medium">${selectedEmployee.remainingAmount.toLocaleString()}</span>
+                  <span className="text-warning font-medium">${(Number(selectedRecord.total_salary) - Number(selectedRecord.paid_amount)).toLocaleString()}</span>
                 </div>
               </div>
               <div className="space-y-2">
@@ -196,16 +309,6 @@ export default function PayrollPage() {
                   placeholder="0.00"
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
-                  max={selectedEmployee.remainingAmount}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="date">Payment Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={paymentDate}
-                  onChange={(e) => setPaymentDate(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
