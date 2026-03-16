@@ -79,26 +79,22 @@ export default function EmployeesPage() {
     if (!addEmail || !addPassword || !addName) return;
     setAddLoading(true);
 
-    // We use the edge function approach - but since we can't create users from client,
-    // we'll use supabase admin. For now, we sign them up via the auth API.
-    const { data, error } = await supabase.auth.signUp({
-      email: addEmail,
-      password: addPassword,
-      options: { data: { full_name: addName } },
+    const { data: fnData, error: fnError } = await supabase.functions.invoke("admin-users", {
+      body: { action: "create_user", email: addEmail, password: addPassword, full_name: addName },
     });
 
-    if (error) {
-      toast({ title: "Failed to add employee", description: error.message, variant: "destructive" });
+    if (fnError || fnData?.error) {
+      toast({ title: "Failed to add employee", description: fnData?.error || fnError?.message, variant: "destructive" });
       setAddLoading(false);
       return;
     }
 
     // Update role if admin
-    if (data.user && addRole === "admin") {
-      await supabase.from("user_roles").update({ role: "admin" as any }).eq("user_id", data.user.id);
+    if (fnData?.user && addRole === "admin") {
+      await supabase.from("user_roles").update({ role: "admin" as any }).eq("user_id", fnData.user.id);
     }
 
-    toast({ title: "Employee added", description: `${addName} has been added. They need to confirm their email.` });
+    toast({ title: "Employee added", description: `${addName} has been added successfully.` });
     setAddOpen(false);
     setAddEmail("");
     setAddName("");
