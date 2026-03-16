@@ -57,6 +57,22 @@ const payrollData = {
 
 const periodLabels = { weekly: "Weekly", monthly: "Monthly", yearly: "Yearly" };
 
+const recentActivity = [
+  { employee: "Sarah Johnson", action: "Checked In", time: "08:02 AM", status: "active" },
+  { employee: "Mike Chen", action: "Started Break", time: "10:15 AM", status: "active" },
+  { employee: "Lisa Park", action: "Checked Out", time: "05:01 PM", status: "completed" },
+  { employee: "James Wilson", action: "Late Check-In", time: "09:32 AM", status: "late" },
+  { employee: "Emma Davis", action: "Checked In", time: "07:58 AM", status: "active" },
+  { employee: "Carlos Martinez", action: "Absent", time: "—", status: "absent" },
+];
+
+const statusMap: Record<string, string> = {
+  active: "status-active",
+  late: "status-late",
+  absent: "status-absent",
+  completed: "status-completed",
+};
+
 export default function ReportsPage() {
   const [period, setPeriod] = useState<Period>("monthly");
 
