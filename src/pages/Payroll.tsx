@@ -80,9 +80,10 @@ export default function PayrollPage() {
       ? supabase.from("attendance_records").select("*").gte("date", start).lte("date", end)
       : supabase.from("attendance_records").select("*").eq("user_id", user.id).gte("date", start).lte("date", end);
 
+    // Use overlapping range: payroll record overlaps with the selected period
     const payrollQuery = isAdmin
-      ? supabase.from("payroll_records").select("*").gte("period_start", start).lte("period_end", end)
-      : supabase.from("payroll_records").select("*").eq("user_id", user.id).gte("period_start", start).lte("period_end", end);
+      ? supabase.from("payroll_records").select("*").lte("period_start", end).gte("period_end", start)
+      : supabase.from("payroll_records").select("*").eq("user_id", user.id).lte("period_start", end).gte("period_end", start);
 
     const [attendanceRes, profilesRes, payrollRes] = await Promise.all([
       attendanceQuery,
