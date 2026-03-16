@@ -95,14 +95,12 @@ export default function EmployeesPage() {
 
     // Update role and hourly_rate
     if (fnData?.user) {
-      const updates: Promise<any>[] = [];
       if (addRole === "admin") {
-        updates.push(supabase.from("user_roles").update({ role: "admin" as any }).eq("user_id", fnData.user.id));
+        await supabase.from("user_roles").update({ role: "admin" as any }).eq("user_id", fnData.user.id);
       }
       if (Number(addRate) > 0) {
-        updates.push(supabase.from("profiles").update({ hourly_rate: Number(addRate) } as any).eq("user_id", fnData.user.id));
+        await supabase.from("profiles").update({ hourly_rate: Number(addRate) } as any).eq("user_id", fnData.user.id);
       }
-      if (updates.length) await Promise.all(updates);
     }
 
     toast({ title: "Employee added", description: `${addName} has been added successfully.` });
