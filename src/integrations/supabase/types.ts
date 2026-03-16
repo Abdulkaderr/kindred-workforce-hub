@@ -83,6 +83,42 @@ export type Database = {
         }
         Relationships: []
       }
+      locations: {
+        Row: {
+          address: string | null
+          assigned_employees: number
+          created_at: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          name: string
+          radius_meters: number
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          assigned_employees?: number
+          created_at?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          radius_meters?: number
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          assigned_employees?: number
+          created_at?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          radius_meters?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payroll_records: {
         Row: {
           created_at: string
