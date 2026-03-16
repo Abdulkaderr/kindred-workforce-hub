@@ -366,9 +366,14 @@ export default function AttendancePage() {
                             </Button>
                           </div>
                         ) : (
-                          <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="flex gap-1.5">
+                            <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => deleteRecord(r.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         )}
                       </td>
                     )}
