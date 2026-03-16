@@ -80,9 +80,10 @@ export default function PayrollPage() {
       ? supabase.from("attendance_records").select("*").gte("date", start).lte("date", end)
       : supabase.from("attendance_records").select("*").eq("user_id", user.id).gte("date", start).lte("date", end);
 
+    // Use overlapping range: payroll record overlaps with the selected period
     const payrollQuery = isAdmin
-      ? supabase.from("payroll_records").select("*").gte("period_start", start).lte("period_end", end)
-      : supabase.from("payroll_records").select("*").eq("user_id", user.id).gte("period_start", start).lte("period_end", end);
+      ? supabase.from("payroll_records").select("*").lte("period_start", end).gte("period_end", start)
+      : supabase.from("payroll_records").select("*").eq("user_id", user.id).lte("period_start", end).gte("period_end", start);
 
     const [attendanceRes, profilesRes, payrollRes] = await Promise.all([
       attendanceQuery,
@@ -113,18 +114,18 @@ export default function PayrollPage() {
       }
     });
 
-    // Build rows
+    // Build rows — prefer stored payroll record values over recalculated ones
     const userIds = new Set([...Object.keys(hoursByUser), ...Object.keys(payrollByUser)]);
     const profileMap = new Map(profiles.map((p) => [p.user_id, p]));
 
     const computed: PayrollRow[] = [];
     userIds.forEach((uid) => {
       const profile = profileMap.get(uid);
-      const rate = Number(profile?.hourly_rate) || 0;
-      const totalHours = Math.round((hoursByUser[uid] || 0) * 10) / 10;
-      const totalSalary = Math.round(rate * totalHours * 100) / 100;
       const pr = payrollByUser[uid];
-      // Always preserve existing paid amount — never overwrite
+      const rate = pr ? Number(pr.hourly_rate) : (Number(profile?.hourly_rate) || 0);
+      // Use stored payroll values if available, otherwise calculate from attendance
+      const totalHours = pr ? Number(pr.total_hours) : Math.round((hoursByUser[uid] || 0) * 10) / 10;
+      const totalSalary = pr ? Number(pr.total_salary) : Math.round(rate * totalHours * 100) / 100;
       const paid = pr ? Number(pr.paid_amount) : 0;
       const remaining = Math.max(0, totalSalary - paid);
       const status: PayrollRow["status"] = remaining <= 0 && totalSalary > 0 ? "Paid" : paid > 0 ? "Partial" : "Pending";
