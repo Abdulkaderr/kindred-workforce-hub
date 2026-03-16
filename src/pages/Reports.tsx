@@ -57,6 +57,22 @@ const payrollData = {
 
 const periodLabels = { weekly: "Weekly", monthly: "Monthly", yearly: "Yearly" };
 
+const recentActivity = [
+  { employee: "Sarah Johnson", action: "Checked In", time: "08:02 AM", status: "active" },
+  { employee: "Mike Chen", action: "Started Break", time: "10:15 AM", status: "active" },
+  { employee: "Lisa Park", action: "Checked Out", time: "05:01 PM", status: "completed" },
+  { employee: "James Wilson", action: "Late Check-In", time: "09:32 AM", status: "late" },
+  { employee: "Emma Davis", action: "Checked In", time: "07:58 AM", status: "active" },
+  { employee: "Carlos Martinez", action: "Absent", time: "—", status: "absent" },
+];
+
+const statusMap: Record<string, string> = {
+  active: "status-active",
+  late: "status-late",
+  absent: "status-absent",
+  completed: "status-completed",
+};
+
 export default function ReportsPage() {
   const [period, setPeriod] = useState<Period>("monthly");
 
@@ -103,6 +119,12 @@ export default function ReportsPage() {
         <StatCard title="Total Hours Worked" value={totalHoursWorked.toFixed(1)} icon={Clock} variant="default" />
         <StatCard title="Total Days Worked" value={totalDaysWorked} icon={CalendarDays} variant="success" />
         <StatCard title="Total Payroll" value={`$${totalPayroll.toLocaleString()}`} icon={DollarSign} variant="warning" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
+        <StatCard title="Total Paid" value={`$${totalPaid.toLocaleString()}`} icon={CheckCircle} variant="success" />
+        <StatCard title="Remaining" value={`$${totalRemaining.toLocaleString()}`} icon={DollarSign} variant="default" />
+        <StatCard title="Avg Hours/Employee" value={(totalHoursWorked / totalEmployees).toFixed(1)} icon={Clock} variant="accent" />
       </div>
 
       {/* Attendance Summary */}
@@ -175,6 +197,40 @@ export default function ReportsPage() {
                 <td>
                   <span className={`status-badge ${e.status === "paid" ? "status-completed" : e.status === "partial" ? "status-pending" : "status-absent"}`}>
                     {e.status.charAt(0).toUpperCase() + e.status.slice(1)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Activity Log */}
+      <div className="rounded-md border bg-card shadow-sm mt-6">
+        <div className="flex items-center justify-between border-b px-5 py-3">
+          <h2 className="text-sm font-semibold flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            Recent Activity Log
+          </h2>
+        </div>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Action</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentActivity.map((item, i) => (
+              <tr key={i}>
+                <td className="font-medium">{item.employee}</td>
+                <td>{item.action}</td>
+                <td className="mono">{item.time}</td>
+                <td>
+                  <span className={`status-badge ${statusMap[item.status]}`}>
+                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
                   </span>
                 </td>
               </tr>
