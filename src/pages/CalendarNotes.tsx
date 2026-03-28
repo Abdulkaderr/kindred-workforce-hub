@@ -464,8 +464,8 @@ export default function CalendarNotesPage() {
                   <SelectTrigger><SelectValue placeholder={t("calendar.noProject")} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{t("calendar.noProject")}</SelectItem>
-                    {locations.map((l) => (
-                      <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
