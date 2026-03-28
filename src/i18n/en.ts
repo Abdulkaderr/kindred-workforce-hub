@@ -226,6 +226,10 @@ const en = {
     locationDeleted: "Location deleted",
     deleteFailed: "Delete failed",
     deleteConfirm: "Delete location \"{{name}}\"?",
+    startDate: "Start Date",
+    endDate: "End Date",
+    pickDate: "Pick a date",
+    invalidDates: "Start date must be before end date",
   },
 
   // Requests

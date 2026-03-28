@@ -83,38 +83,73 @@ export type Database = {
         }
         Relationships: []
       }
+      location_employees: {
+        Row: {
+          created_at: string
+          id: string
+          location_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_employees_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           address: string | null
           assigned_employees: number
           created_at: string
+          end_date: string | null
           id: string
           latitude: number | null
           longitude: number | null
           name: string
           radius_meters: number
+          start_date: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
           assigned_employees?: number
           created_at?: string
+          end_date?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
           name: string
           radius_meters?: number
+          start_date?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
           assigned_employees?: number
           created_at?: string
+          end_date?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
           name?: string
           radius_meters?: number
+          start_date?: string | null
           updated_at?: string
         }
         Relationships: []
