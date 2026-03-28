@@ -226,6 +226,10 @@ const nl = {
     locationDeleted: "Locatie verwijderd",
     deleteFailed: "Verwijderen mislukt",
     deleteConfirm: "Locatie \"{{name}}\" verwijderen?",
+    startDate: "Startdatum",
+    endDate: "Einddatum",
+    pickDate: "Kies een datum",
+    invalidDates: "Startdatum moet vóór de einddatum liggen",
   },
 
   // Requests
