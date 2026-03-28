@@ -236,29 +236,29 @@ export default function LocationsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>{t("locations.startDate")}</Label>
-                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                <Popover open={startDateOpen} onOpenChange={setStartDateOpen} modal={false}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !formStartDate && "text-muted-foreground")}>
+                    <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal", !formStartDate && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formStartDate ? format(formStartDate, "PPP") : t("locations.pickDate")}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[9999]" align="start">
-                    <Calendar mode="single" selected={formStartDate} onSelect={(d: Date | undefined) => { if (d) { setFormStartDate(d); setStartDateOpen(false); } }} initialFocus className="p-3 pointer-events-auto" />
+                  <PopoverContent className="w-auto p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <Calendar mode="single" selected={formStartDate} onSelect={(d: Date | undefined) => { setFormStartDate(d); setStartDateOpen(false); }} initialFocus className="p-3 pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>
               <div className="space-y-2">
                 <Label>{t("locations.endDate")}</Label>
-                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                <Popover open={endDateOpen} onOpenChange={setEndDateOpen} modal={false}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !formEndDate && "text-muted-foreground")}>
+                    <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal", !formEndDate && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formEndDate ? format(formEndDate, "PPP") : t("locations.pickDate")}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[9999]" align="start">
-                    <Calendar mode="single" selected={formEndDate} onSelect={(d: Date | undefined) => { if (d) { setFormEndDate(d); setEndDateOpen(false); } }} disabled={(date) => formStartDate ? date < formStartDate : false} initialFocus className="p-3 pointer-events-auto" />
+                  <PopoverContent className="w-auto p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <Calendar mode="single" selected={formEndDate} onSelect={(d: Date | undefined) => { setFormEndDate(d); setEndDateOpen(false); }} disabled={(date) => formStartDate ? date < formStartDate : false} initialFocus className="p-3 pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>
