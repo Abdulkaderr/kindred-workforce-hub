@@ -21,6 +21,7 @@ type AttendanceRecord = {
   check_out_time: string | null;
   break_duration_ms: number;
   status: string;
+  project_id: string | null;
 };
 
 type Profile = {
@@ -350,6 +351,7 @@ export default function AttendancePage() {
               <tr>
                 {isAdmin && <th>Employee</th>}
                 <th>Date</th>
+                <th>Project Location</th>
                 <th>Check In</th>
                 <th>Check Out</th>
                 <th>Break</th>
@@ -368,6 +370,7 @@ export default function AttendancePage() {
                   <tr key={r.id}>
                     {isAdmin && <td className="font-medium">{getName(r.user_id)}</td>}
                     <td className="mono">{new Date(r.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
+                    <td>{r.project_id ? (allProjects.find(p => p.id === r.project_id)?.location || "—") : "—"}</td>
                     <td className="mono">
                       {isEditing ? (
                         <Input type="datetime-local" value={editCheckIn} onChange={(e) => setEditCheckIn(e.target.value)} className="h-8 w-40 text-xs" />
