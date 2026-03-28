@@ -275,7 +275,9 @@ export default function EmployeeDashboard() {
             <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
               <SelectTrigger className="h-11"><SelectValue placeholder={t("projects.selectProject")} /></SelectTrigger>
               <SelectContent>
-                {projects.map((p) => (
+                {projects
+                  .filter((p) => !p.end_date || new Date(p.end_date) >= new Date(new Date().toISOString().split("T")[0]))
+                  .map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name} — {p.location}</SelectItem>
                 ))}
               </SelectContent>
