@@ -22,7 +22,7 @@ import {
 } from "date-fns";
 
 type Profile = { user_id: string; full_name: string | null; email: string | null };
-type Location = { id: string; name: string };
+type ProjectRef = { id: string; name: string };
 
 type Note = {
   id: string;
@@ -51,7 +51,7 @@ export default function CalendarNotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [noteEmployees, setNoteEmployees] = useState<Record<string, string[]>>({});
   const [employees, setEmployees] = useState<Profile[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
+  const [projects, setProjects] = useState<ProjectRef[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [viewMode, setViewMode] = useState<ViewMode>("month");
@@ -76,11 +76,11 @@ export default function CalendarNotesPage() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [{ data: n }, { data: ne }, { data: emp }, { data: loc }] = await Promise.all([
+    const [{ data: n }, { data: ne }, { data: emp }, { data: proj }] = await Promise.all([
       supabase.from("notes").select("*").order("note_date", { ascending: true }),
       supabase.from("note_employees").select("note_id, user_id"),
       supabase.from("profiles").select("user_id, full_name, email"),
-      supabase.from("locations").select("id, name"),
+      supabase.from("projects").select("id, name"),
     ]);
     setNotes((n as Note[]) || []);
     const map: Record<string, string[]> = {};
@@ -90,7 +90,7 @@ export default function CalendarNotesPage() {
     });
     setNoteEmployees(map);
     setEmployees(emp || []);
-    setLocations((loc as Location[]) || []);
+    setProjects((proj as ProjectRef[]) || []);
     setLoading(false);
   };
 
@@ -225,7 +225,7 @@ export default function CalendarNotesPage() {
     setFormEmployees((prev) => prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid]);
   };
 
-  const getProjectName = (id: string | null) => locations.find((l) => l.id === id)?.name || "";
+  const getProjectName = (id: string | null) => projects.find((p) => p.id === id)?.name || "";
   const getEmployeeName = (uid: string) => {
     const emp = employees.find((e) => e.user_id === uid);
     return emp?.full_name || emp?.email || uid.slice(0, 8);
