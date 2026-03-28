@@ -107,13 +107,13 @@ export default function AttendancePage() {
     const [recordsRes, profilesRes, projectsRes] = await Promise.all([
       query,
       isAdmin ? supabase.from("profiles").select("user_id, full_name, email") : Promise.resolve({ data: [] }),
-      isAdmin ? supabase.from("projects").select("id, name, location") : Promise.resolve({ data: [] }),
+      supabase.from("projects").select("id, name, location"),
     ]);
 
     setRecords(recordsRes.data || []);
     setProfiles(profilesRes.data || []);
     if (isAdmin && profilesRes.data) setAllProfiles(profilesRes.data as Profile[]);
-    if (isAdmin && projectsRes.data) setAllProjects(projectsRes.data as any[]);
+    if (projectsRes.data) setAllProjects(projectsRes.data as any[]);
     setLoading(false);
   };
 
