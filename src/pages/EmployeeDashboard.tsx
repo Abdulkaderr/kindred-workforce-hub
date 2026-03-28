@@ -6,14 +6,8 @@ import {
   Coffee,
   Timer,
   Clock,
-  FileWarning,
-  Send,
   FolderKanban,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -44,10 +38,6 @@ export default function EmployeeDashboard() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [projects, setProjects] = useState<Project[]>([]);
 
-  const [reqDate, setReqDate] = useState("");
-  const [reqType, setReqType] = useState("");
-  const [reqNote, setReqNote] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
   const now = () =>
     new Date().toLocaleTimeString("en-US", {
@@ -203,29 +193,6 @@ export default function EmployeeDashboard() {
     return `${Math.floor(mins / 60)}h ${mins % 60}m`;
   };
 
-  const handleSubmitRequest = async () => {
-    if (!reqDate || !reqType) {
-      toast({ title: t("employeeDashboard.fillDateAndType"), variant: "destructive" });
-      return;
-    }
-    setSubmitting(true);
-    const { error } = await supabase.from("correction_requests").insert({
-      user_id: user!.id,
-      request_date: reqDate,
-      request_type: reqType,
-      note: reqNote || null,
-    });
-    setSubmitting(false);
-    if (error) {
-      toast({ title: t("employeeDashboard.requestFailed"), description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: t("employeeDashboard.requestSubmitted"), description: t("employeeDashboard.requestSubmittedDesc") });
-      setReqDate("");
-      setReqType("");
-      setReqNote("");
-    }
-  };
-
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-md w-full space-y-6 py-2">
@@ -318,36 +285,6 @@ export default function EmployeeDashboard() {
           </div>
         )}
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm space-y-4">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <FileWarning className="h-3.5 w-3.5" /> {t("employeeDashboard.requestCorrection")}
-          </h2>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t("employeeDashboard.date")}</Label>
-              <Input type="date" value={reqDate} onChange={(e) => setReqDate(e.target.value)} className="h-11" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t("employeeDashboard.requestType")}</Label>
-              <Select value={reqType} onValueChange={setReqType}>
-                <SelectTrigger className="h-11"><SelectValue placeholder={t("employeeDashboard.selectType")} /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="missing_check_in">{t("employeeDashboard.missingCheckIn")}</SelectItem>
-                  <SelectItem value="missing_check_out">{t("employeeDashboard.missingCheckOut")}</SelectItem>
-                  <SelectItem value="fill_missing_day">{t("employeeDashboard.fillMissingDay")}</SelectItem>
-                  <SelectItem value="correct_record">{t("employeeDashboard.correctRecord")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">{t("employeeDashboard.note")}</Label>
-              <Textarea value={reqNote} onChange={(e) => setReqNote(e.target.value)} placeholder={t("employeeDashboard.notePlaceholder")} className="min-h-[70px] resize-none" />
-            </div>
-            <Button onClick={handleSubmitRequest} disabled={submitting} className="w-full h-11 gap-2">
-              {submitting ? t("employeeDashboard.submitting") : <><Send className="h-4 w-4" /> {t("employeeDashboard.submitRequest")}</>}
-            </Button>
-          </div>
-        </div>
       </div>
     </DashboardLayout>
   );
