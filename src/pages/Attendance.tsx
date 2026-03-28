@@ -278,6 +278,7 @@ export default function AttendancePage() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
                   <div className="grid gap-1.5">
                     <Label>Date</Label>
                     <Input type="date" value={addDate} onChange={(e) => setAddDate(e.target.value)} />
