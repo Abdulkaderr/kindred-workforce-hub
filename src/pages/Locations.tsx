@@ -231,11 +231,6 @@ export default function LocationsPage() {
           <div className="space-y-4">
             <div className="space-y-2"><Label>{t("locations.name")}</Label><Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Main Office" /></div>
             <div className="space-y-2"><Label>{t("locations.address")}</Label><Input value={formAddress} onChange={(e) => setFormAddress(e.target.value)} placeholder="123 Main St, City" /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2"><Label>{t("locations.latitude")}</Label><Input type="number" step="any" value={formLat} onChange={(e) => setFormLat(e.target.value)} placeholder="40.7128" /></div>
-              <div className="space-y-2"><Label>{t("locations.longitude")}</Label><Input type="number" step="any" value={formLng} onChange={(e) => setFormLng(e.target.value)} placeholder="-74.0060" /></div>
-            </div>
-            <div className="space-y-2"><Label>{t("locations.radiusMeters")}</Label><Input type="number" value={formRadius} onChange={(e) => setFormRadius(e.target.value)} placeholder="200" /></div>
 
             {/* Date pickers */}
             <div className="grid grid-cols-2 gap-3">
