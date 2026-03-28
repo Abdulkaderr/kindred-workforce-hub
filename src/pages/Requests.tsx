@@ -1,10 +1,21 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
+import { FileWarning, Send } from "lucide-react";
 
 type CorrectionRequest = {
   id: string;
@@ -86,6 +97,35 @@ export default function RequestsPage() {
     }
   };
 
+  const [reqDate, setReqDate] = useState("");
+  const [reqType, setReqType] = useState("");
+  const [reqNote, setReqNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmitRequest = async () => {
+    if (!reqDate || !reqType) {
+      toast({ title: t("employeeDashboard.fillDateAndType"), variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase.from("correction_requests").insert({
+      user_id: user!.id,
+      request_date: reqDate,
+      request_type: reqType,
+      note: reqNote || null,
+    });
+    setSubmitting(false);
+    if (error) {
+      toast({ title: t("employeeDashboard.requestFailed"), description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: t("employeeDashboard.requestSubmitted"), description: t("employeeDashboard.requestSubmittedDesc") });
+      setReqDate("");
+      setReqType("");
+      setReqNote("");
+      fetchRequests();
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="page-header">
@@ -94,6 +134,39 @@ export default function RequestsPage() {
           <p className="text-sm text-muted-foreground mt-0.5">{isAdmin ? t("requests.subtitle") : t("requests.mySubtitle")}</p>
         </div>
       </div>
+
+      {!isAdmin && (
+        <div className="rounded-xl border bg-card p-4 shadow-sm space-y-4 mb-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <FileWarning className="h-3.5 w-3.5" /> {t("employeeDashboard.requestCorrection")}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t("employeeDashboard.date")}</Label>
+              <Input type="date" value={reqDate} onChange={(e) => setReqDate(e.target.value)} className="h-11" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t("employeeDashboard.requestType")}</Label>
+              <Select value={reqType} onValueChange={setReqType}>
+                <SelectTrigger className="h-11"><SelectValue placeholder={t("employeeDashboard.selectType")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="missing_check_in">{t("employeeDashboard.missingCheckIn")}</SelectItem>
+                  <SelectItem value="missing_check_out">{t("employeeDashboard.missingCheckOut")}</SelectItem>
+                  <SelectItem value="fill_missing_day">{t("employeeDashboard.fillMissingDay")}</SelectItem>
+                  <SelectItem value="correct_record">{t("employeeDashboard.correctRecord")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t("employeeDashboard.note")}</Label>
+            <Textarea value={reqNote} onChange={(e) => setReqNote(e.target.value)} placeholder={t("employeeDashboard.notePlaceholder")} className="min-h-[70px] resize-none" />
+          </div>
+          <Button onClick={handleSubmitRequest} disabled={submitting} className="w-full sm:w-auto h-11 gap-2">
+            {submitting ? t("employeeDashboard.submitting") : <><Send className="h-4 w-4" /> {t("employeeDashboard.submitRequest")}</>}
+          </Button>
+        </div>
+      )}
 
       <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
         {loading ? (
