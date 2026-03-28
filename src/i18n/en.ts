@@ -233,6 +233,7 @@ const en = {
     deleteFailed: "Delete failed",
     deleteConfirm: "Delete project \"{{name}}\"?",
     invalidDates: "Start date must be before end date",
+    datesRequired: "Start date and end date are required",
     nameLocationRequired: "Project name and location are required",
     locationExists: "A project with this location already exists",
     projectExpired: "This project has ended. You cannot check in after the end date.",

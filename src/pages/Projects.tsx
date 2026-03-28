@@ -164,7 +164,11 @@ export default function ProjectsPage() {
       toast({ title: t("projects.nameLocationRequired"), variant: "destructive" });
       return;
     }
-    if (formStartDate && formEndDate && formStartDate >= formEndDate) {
+    if (!formStartDate || !formEndDate) {
+      toast({ title: t("projects.datesRequired"), variant: "destructive" });
+      return;
+    }
+    if (formStartDate >= formEndDate) {
       toast({ title: t("projects.invalidDates"), variant: "destructive" });
       return;
     }
@@ -384,11 +388,11 @@ export default function ProjectsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>{t("projects.startDate")}</Label>
-                <Input type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} />
+                <Label>{t("projects.startDate")} *</Label>
+                <Input type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} required />
               </div>
               <div className="space-y-2">
-                <Label>{t("projects.endDate")}</Label>
+                <Label>{t("projects.endDate")} *</Label>
                 <Input
                   type="date"
                   value={formEndDate}
