@@ -233,6 +233,7 @@ const nl = {
     deleteFailed: "Verwijderen mislukt",
     deleteConfirm: "Project \"{{name}}\" verwijderen?",
     invalidDates: "Startdatum moet vóór de einddatum liggen",
+    datesRequired: "Startdatum en einddatum zijn verplicht",
     nameLocationRequired: "Projectnaam en locatie zijn verplicht",
     locationExists: "Er bestaat al een project met deze locatie",
     projectExpired: "Dit project is beëindigd. U kunt niet inchecken na de einddatum.",
