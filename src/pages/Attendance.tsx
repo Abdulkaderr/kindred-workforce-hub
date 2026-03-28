@@ -269,6 +269,16 @@ export default function AttendancePage() {
                     </Select>
                   </div>
                   <div className="grid gap-1.5">
+                    <Label>Project</Label>
+                    <Select value={addProjectId} onValueChange={setAddProjectId}>
+                      <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
+                      <SelectContent>
+                        {allProjects.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name} — {p.location}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  <div className="grid gap-1.5">
                     <Label>Date</Label>
                     <Input type="date" value={addDate} onChange={(e) => setAddDate(e.target.value)} />
                   </div>
