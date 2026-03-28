@@ -392,7 +392,7 @@ export default function ProjectsPage() {
                 <Input type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} required />
               </div>
               <div className="space-y-2">
-                <Label>{t("projects.endDate")}</Label>
+                <Label>{t("projects.endDate")} *</Label>
                 <Input
                   type="date"
                   value={formEndDate}
