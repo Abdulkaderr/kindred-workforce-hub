@@ -11,6 +11,7 @@ import {
   Settings,
   Shield,
   User,
+  CalendarDays,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -29,6 +30,7 @@ const navItems: NavItem[] = [
   { titleKey: "nav.attendance", url: "/attendance", icon: Clock, sectionKey: "nav.management" },
   { titleKey: "nav.payroll", url: "/payroll", icon: DollarSign, sectionKey: "nav.management" },
   { titleKey: "nav.locations", url: "/locations", icon: MapPin, sectionKey: "nav.management", adminOnly: true },
+  { titleKey: "nav.calendar", url: "/calendar", icon: CalendarDays, sectionKey: "nav.management" },
   { titleKey: "nav.requests", url: "/requests", icon: ClipboardList, sectionKey: "nav.management" },
   { titleKey: "nav.reports", url: "/reports", icon: FileText, sectionKey: "nav.reports" },
   { titleKey: "nav.settings", url: "/settings", icon: Settings, sectionKey: "nav.system" },
