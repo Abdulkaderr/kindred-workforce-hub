@@ -49,8 +49,6 @@ export default function LocationsPage() {
   const [formEndDate, setFormEndDate] = useState<Date | undefined>();
   const [formSelectedEmployees, setFormSelectedEmployees] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const [startDateOpen, setStartDateOpen] = useState(false);
-  const [endDateOpen, setEndDateOpen] = useState(false);
 
   const fetchLocations = async () => {
     setLoading(true);
