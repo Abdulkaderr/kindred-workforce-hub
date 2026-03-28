@@ -25,6 +25,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 
+type Project = { id: string; name: string; location: string };
+
 export default function EmployeeDashboard() {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -38,6 +40,8 @@ export default function EmployeeDashboard() {
   const [breakStart, setBreakStart] = useState<number | null>(null);
   const [totalBreakMs, setTotalBreakMs] = useState(0);
   const [recordId, setRecordId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [projects, setProjects] = useState<Project[]>([]);
 
   const [reqDate, setReqDate] = useState("");
   const [reqType, setReqType] = useState("");
@@ -53,6 +57,12 @@ export default function EmployeeDashboard() {
 
   useEffect(() => {
     if (!user) return;
+
+    // Fetch projects
+    supabase.from("projects").select("id, name, location").then(({ data }) => {
+      setProjects((data as Project[]) || []);
+    });
+
     const today = new Date().toISOString().split("T")[0];
     supabase
       .from("attendance_records")
@@ -63,6 +73,7 @@ export default function EmployeeDashboard() {
       .then(({ data }) => {
         if (data) {
           setRecordId(data.id);
+          if ((data as any).project_id) setSelectedProjectId((data as any).project_id);
           if (data.check_in_time) {
             setCheckInTime(
               new Date(data.check_in_time).toLocaleTimeString("en-US", {
@@ -90,6 +101,10 @@ export default function EmployeeDashboard() {
 
   const handleCheckIn = async () => {
     if (!user) return;
+    if (!selectedProjectId) {
+      toast({ title: t("projects.selectProjectRequired"), variant: "destructive" });
+      return;
+    }
     const timestamp = new Date().toISOString();
     setCheckInTime(now());
     setCheckOutTime(null);
@@ -106,7 +121,8 @@ export default function EmployeeDashboard() {
           check_out_time: null,
           break_duration_ms: 0,
           status: "checked_in",
-        },
+          project_id: selectedProjectId,
+        } as any,
         { onConflict: "user_id,date" }
       )
       .select()
@@ -238,6 +254,23 @@ export default function EmployeeDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Project Selection */}
+        {!checkedIn && (
+          <div className="rounded-xl border bg-card p-4 shadow-sm space-y-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <FolderKanban className="h-3.5 w-3.5" /> {t("projects.selectProject")}
+            </h2>
+            <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+              <SelectTrigger className="h-11"><SelectValue placeholder={t("projects.selectProject")} /></SelectTrigger>
+              <SelectContent>
+                {projects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name} — {p.location}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <button onClick={handleCheckIn} disabled={checkedIn}
