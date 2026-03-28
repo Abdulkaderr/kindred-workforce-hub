@@ -248,8 +248,8 @@ export default function LocationsPage() {
                       {formStartDate ? format(formStartDate, "PPP") : t("locations.pickDate")}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={formStartDate} onSelect={(d) => { setFormStartDate(d); setStartDateOpen(false); }} initialFocus className="p-3 pointer-events-auto" />
+                  <PopoverContent className="w-auto p-0 z-[9999]" align="start">
+                    <Calendar mode="single" selected={formStartDate} onSelect={(d: Date | undefined) => { if (d) { setFormStartDate(d); setStartDateOpen(false); } }} initialFocus className="p-3 pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -262,8 +262,8 @@ export default function LocationsPage() {
                       {formEndDate ? format(formEndDate, "PPP") : t("locations.pickDate")}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={formEndDate} onSelect={(d) => { setFormEndDate(d); setEndDateOpen(false); }} disabled={(date) => formStartDate ? date <= formStartDate : false} initialFocus className="p-3 pointer-events-auto" />
+                  <PopoverContent className="w-auto p-0 z-[9999]" align="start">
+                    <Calendar mode="single" selected={formEndDate} onSelect={(d: Date | undefined) => { if (d) { setFormEndDate(d); setEndDateOpen(false); } }} disabled={(date) => formStartDate ? date < formStartDate : false} initialFocus className="p-3 pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>
