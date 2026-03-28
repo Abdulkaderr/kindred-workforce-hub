@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { MapPin, Plus, Pencil, Trash2, CalendarIcon } from "lucide-react";
+import { MapPin, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,7 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 
 type Profile = { user_id: string; full_name: string | null; email: string | null };
 
@@ -52,8 +49,6 @@ export default function LocationsPage() {
   const [formEndDate, setFormEndDate] = useState<Date | undefined>();
   const [formSelectedEmployees, setFormSelectedEmployees] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const [startDateOpen, setStartDateOpen] = useState(false);
-  const [endDateOpen, setEndDateOpen] = useState(false);
 
   const fetchLocations = async () => {
     setLoading(true);
@@ -236,31 +231,20 @@ export default function LocationsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>{t("locations.startDate")}</Label>
-                <Popover open={startDateOpen} onOpenChange={setStartDateOpen} modal={false}>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal", !formStartDate && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formStartDate ? format(formStartDate, "PPP") : t("locations.pickDate")}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                    <Calendar mode="single" selected={formStartDate} onSelect={(d: Date | undefined) => { setFormStartDate(d); setStartDateOpen(false); }} initialFocus className="p-3 pointer-events-auto" />
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  type="date"
+                  value={formStartDate ? format(formStartDate, "yyyy-MM-dd") : ""}
+                  onChange={(e) => setFormStartDate(e.target.value ? new Date(e.target.value + "T00:00:00") : undefined)}
+                />
               </div>
               <div className="space-y-2">
                 <Label>{t("locations.endDate")}</Label>
-                <Popover open={endDateOpen} onOpenChange={setEndDateOpen} modal={false}>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="outline" className={cn("w-full justify-start text-left font-normal", !formEndDate && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formEndDate ? format(formEndDate, "PPP") : t("locations.pickDate")}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[9999]" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                    <Calendar mode="single" selected={formEndDate} onSelect={(d: Date | undefined) => { setFormEndDate(d); setEndDateOpen(false); }} disabled={(date) => formStartDate ? date < formStartDate : false} initialFocus className="p-3 pointer-events-auto" />
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  type="date"
+                  value={formEndDate ? format(formEndDate, "yyyy-MM-dd") : ""}
+                  min={formStartDate ? format(formStartDate, "yyyy-MM-dd") : undefined}
+                  onChange={(e) => setFormEndDate(e.target.value ? new Date(e.target.value + "T00:00:00") : undefined)}
+                />
               </div>
             </div>
 
