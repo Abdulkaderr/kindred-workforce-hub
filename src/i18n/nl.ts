@@ -235,6 +235,7 @@ const nl = {
     invalidDates: "Startdatum moet vóór de einddatum liggen",
     nameLocationRequired: "Projectnaam en locatie zijn verplicht",
     locationExists: "Er bestaat al een project met deze locatie",
+    projectExpired: "Dit project is beëindigd. U kunt niet inchecken na de einddatum.",
     searchPlaceholder: "Zoek projecten...",
     allTime: "Altijd",
     weekly: "Wekelijks",

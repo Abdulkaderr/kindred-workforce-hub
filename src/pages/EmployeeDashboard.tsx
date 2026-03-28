@@ -26,7 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 
-type Project = { id: string; name: string; location: string };
+type Project = { id: string; name: string; location: string; end_date: string | null };
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
@@ -60,7 +60,7 @@ export default function EmployeeDashboard() {
     if (!user) return;
 
     // Fetch projects
-    supabase.from("projects").select("id, name, location").then(({ data }) => {
+    supabase.from("projects").select("id, name, location, end_date").then(({ data }) => {
       setProjects((data as Project[]) || []);
     });
 
@@ -105,6 +105,16 @@ export default function EmployeeDashboard() {
     if (!selectedProjectId) {
       toast({ title: t("projects.selectProjectRequired"), variant: "destructive" });
       return;
+    }
+    // Check if project end date has passed
+    const selectedProject = projects.find(p => p.id === selectedProjectId);
+    if (selectedProject && (selectedProject as any).end_date) {
+      const endDate = new Date((selectedProject as any).end_date);
+      const today = new Date(new Date().toISOString().split("T")[0]);
+      if (today > endDate) {
+        toast({ title: t("projects.projectExpired"), variant: "destructive" });
+        return;
+      }
     }
     const timestamp = new Date().toISOString();
     setCheckInTime(now());

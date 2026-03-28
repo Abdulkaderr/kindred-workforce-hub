@@ -292,6 +292,8 @@ export default function ProjectsPage() {
               <tr>
                 <th>{t("projects.projectName")}</th>
                 <th>{t("projects.projectLocation")}</th>
+                <th>{t("projects.startDate")}</th>
+                <th>{t("projects.endDate")}</th>
                 <th>{t("projects.revenue")}</th>
                 <th>{t("projects.expenses")}</th>
                 <th>{t("projects.workerWages")}</th>
@@ -315,6 +317,14 @@ export default function ProjectsPage() {
                       </div>
                     </td>
                     <td className="text-muted-foreground">{p.location}</td>
+                    <td className="text-muted-foreground">{p.start_date || "—"}</td>
+                    <td className="text-muted-foreground">
+                      {p.end_date ? (
+                        <span className={new Date(p.end_date) < new Date(new Date().toISOString().split("T")[0]) ? "text-destructive font-medium" : ""}>
+                          {p.end_date}
+                        </span>
+                      ) : "—"}
+                    </td>
                     <td className="mono">${p.total_amount.toLocaleString()}</td>
                     <td className="mono">${p.expenses.toLocaleString()}</td>
                     <td className="mono">${Math.round(stats.wages).toLocaleString()}</td>

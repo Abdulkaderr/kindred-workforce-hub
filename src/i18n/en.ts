@@ -235,6 +235,7 @@ const en = {
     invalidDates: "Start date must be before end date",
     nameLocationRequired: "Project name and location are required",
     locationExists: "A project with this location already exists",
+    projectExpired: "This project has ended. You cannot check in after the end date.",
     searchPlaceholder: "Search projects...",
     allTime: "All Time",
     weekly: "Weekly",
