@@ -52,6 +52,8 @@ export default function LocationsPage() {
   const [formEndDate, setFormEndDate] = useState<Date | undefined>();
   const [formSelectedEmployees, setFormSelectedEmployees] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
 
   const fetchLocations = async () => {
     setLoading(true);
@@ -180,8 +182,6 @@ export default function LocationsPage() {
               <tr>
                 <th>{t("locations.location")}</th>
                 <th>{t("locations.address")}</th>
-                <th>{t("locations.coordinates")}</th>
-                <th>{t("locations.radius")}</th>
                 <th>{t("locations.startDate")}</th>
                 <th>{t("locations.endDate")}</th>
                 <th>{t("locations.employeesCol")}</th>
@@ -195,8 +195,6 @@ export default function LocationsPage() {
                   <tr key={l.id}>
                     <td><div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-accent" /><span className="font-medium">{l.name}</span></div></td>
                     <td className="text-muted-foreground">{l.address || "—"}</td>
-                    <td className="mono text-muted-foreground">{l.latitude && l.longitude ? `${l.latitude}, ${l.longitude}` : "—"}</td>
-                    <td className="mono">{l.radius_meters}m</td>
                     <td className="text-muted-foreground">{l.start_date || "—"}</td>
                     <td className="text-muted-foreground">{l.end_date || "—"}</td>
                     <td>
@@ -243,7 +241,7 @@ export default function LocationsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>{t("locations.startDate")}</Label>
-                <Popover>
+                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !formStartDate && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -251,13 +249,13 @@ export default function LocationsPage() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={formStartDate} onSelect={setFormStartDate} initialFocus className="p-3 pointer-events-auto" />
+                    <Calendar mode="single" selected={formStartDate} onSelect={(d) => { setFormStartDate(d); setStartDateOpen(false); }} initialFocus className="p-3 pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>
               <div className="space-y-2">
                 <Label>{t("locations.endDate")}</Label>
-                <Popover>
+                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !formEndDate && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -265,7 +263,7 @@ export default function LocationsPage() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={formEndDate} onSelect={setFormEndDate} disabled={(date) => formStartDate ? date <= formStartDate : false} initialFocus className="p-3 pointer-events-auto" />
+                    <Calendar mode="single" selected={formEndDate} onSelect={(d) => { setFormEndDate(d); setEndDateOpen(false); }} disabled={(date) => formStartDate ? date <= formStartDate : false} initialFocus className="p-3 pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>
