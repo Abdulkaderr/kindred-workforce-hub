@@ -164,7 +164,11 @@ export default function ProjectsPage() {
       toast({ title: t("projects.nameLocationRequired"), variant: "destructive" });
       return;
     }
-    if (formStartDate && formEndDate && formStartDate >= formEndDate) {
+    if (!formStartDate || !formEndDate) {
+      toast({ title: t("projects.datesRequired"), variant: "destructive" });
+      return;
+    }
+    if (formStartDate >= formEndDate) {
       toast({ title: t("projects.invalidDates"), variant: "destructive" });
       return;
     }
