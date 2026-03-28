@@ -77,7 +77,9 @@ export default function AttendancePage() {
   const [addCheckIn, setAddCheckIn] = useState("");
   const [addCheckOut, setAddCheckOut] = useState("");
   const [addStatus, setAddStatus] = useState("checked_in");
+  const [addProjectId, setAddProjectId] = useState("");
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
+  const [allProjects, setAllProjects] = useState<{ id: string; name: string; location: string }[]>([]);
 
   // Editing state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -101,14 +103,16 @@ export default function AttendancePage() {
       query = query.eq("user_id", user.id);
     }
 
-    const [recordsRes, profilesRes] = await Promise.all([
+    const [recordsRes, profilesRes, projectsRes] = await Promise.all([
       query,
       isAdmin ? supabase.from("profiles").select("user_id, full_name, email") : Promise.resolve({ data: [] }),
+      isAdmin ? supabase.from("projects").select("id, name, location") : Promise.resolve({ data: [] }),
     ]);
 
     setRecords(recordsRes.data || []);
     setProfiles(profilesRes.data || []);
     if (isAdmin && profilesRes.data) setAllProfiles(profilesRes.data as Profile[]);
+    if (isAdmin && projectsRes.data) setAllProjects(projectsRes.data as any[]);
     setLoading(false);
   };
 
@@ -138,6 +142,7 @@ export default function AttendancePage() {
       date: addDate,
       status: addStatus,
       break_duration_ms: 0,
+      project_id: addProjectId || null,
     };
     if (addCheckIn) insert.check_in_time = new Date(`${addDate}T${addCheckIn}`).toISOString();
     if (addCheckOut) insert.check_out_time = new Date(`${addDate}T${addCheckOut}`).toISOString();
@@ -155,6 +160,7 @@ export default function AttendancePage() {
       setAddCheckIn("");
       setAddCheckOut("");
       setAddStatus("checked_in");
+      setAddProjectId("");
       fetchData();
     }
   };
