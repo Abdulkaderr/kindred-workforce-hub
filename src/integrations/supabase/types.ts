@@ -22,6 +22,7 @@ export type Database = {
           created_at: string
           date: string
           id: string
+          project_id: string | null
           status: string
           updated_at: string
           user_id: string
@@ -33,6 +34,7 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          project_id?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -44,11 +46,20 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          project_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       correction_requests: {
         Row: {
@@ -228,7 +239,7 @@ export type Database = {
             foreignKeyName: "notes_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
-            referencedRelation: "locations"
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -305,6 +316,71 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      project_employees: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_employees_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          expenses: number
+          id: string
+          location: string
+          name: string
+          start_date: string | null
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          expenses?: number
+          id?: string
+          location: string
+          name: string
+          start_date?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          expenses?: number
+          id?: string
+          location?: string
+          name?: string
+          start_date?: string | null
+          total_amount?: number
+          updated_at?: string
         }
         Relationships: []
       }
