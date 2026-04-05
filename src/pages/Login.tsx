@@ -53,7 +53,7 @@ export default function LoginPage() {
           password,
         });
         if (error) throw error;
-        navigate("/", { replace: true });
+        // Navigation handled by useEffect watching session
       }
     } catch (error: any) {
       toast({
