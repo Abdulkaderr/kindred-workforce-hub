@@ -18,6 +18,14 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { session } = useAuth();
+
+  // Redirect when session is established (after login or if already logged in)
+  useEffect(() => {
+    if (session) {
+      navigate("/", { replace: true });
+    }
+  }, [session, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
