@@ -177,12 +177,14 @@ export default function PayrollPage() {
         weekStart: ws,
         weekEnd: we,
         weekLabel: formatWeekLabel(ws, we),
+        weekNumber: getWeekNumber(ws),
         totalHours,
         totalSalary,
         paid,
         remaining,
         status,
         payrollId: payrollRec?.id || null,
+        paymentDate: payrollRec?.payment_date || null,
       });
     });
 
