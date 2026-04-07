@@ -348,6 +348,47 @@ export type Database = {
           },
         ]
       }
+      project_expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          expense_date: string
+          id: string
+          invoice_reference: string
+          note: string | null
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          expense_date?: string
+          id?: string
+          invoice_reference: string
+          note?: string | null
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          expense_date?: string
+          id?: string
+          invoice_reference?: string
+          note?: string | null
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_expenses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
