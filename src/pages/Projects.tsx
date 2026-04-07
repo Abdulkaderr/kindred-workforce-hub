@@ -392,10 +392,12 @@ export default function ProjectsPage() {
               <Label>{t("projects.projectLocation")} *</Label>
               <Input value={formLocation} onChange={(e) => setFormLocation(e.target.value)} placeholder="Amsterdam Central" />
             </div>
-            <div className="space-y-2">
-              <Label>{t("projects.totalAmount")}</Label>
-              <Input type="number" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} placeholder="0" />
-            </div>
+            {editing && (
+              <div className="space-y-2">
+                <Label>{t("projects.totalAmount")}</Label>
+                <Input type="number" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} placeholder="0" />
+              </div>
+            )}
             {editing && (
               <div className="space-y-2">
                 <Label>{t("projects.expenses")}</Label>
