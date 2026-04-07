@@ -6,12 +6,14 @@ export type WeekSummary = {
   weekStart: string;
   weekEnd: string;
   weekLabel: string;
+  weekNumber: number;
   totalHours: number;
   totalSalary: number;
   paid: number;
   remaining: number;
   status: "Betaald" | "Deels" | "Openstaand";
   payrollId: string | null;
+  paymentDate: string | null;
 };
 
 type Props = {
@@ -40,10 +42,12 @@ export function WeekList({ employeeName, weeks, onSelectWeek, onBack }: Props) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Week</th>
+                <th>Week Nr.</th>
+                <th>Periode</th>
                 <th>Uren</th>
                 <th>Salaris</th>
                 <th>Betaald</th>
+                <th>Betaaldatum</th>
                 <th>Resterend</th>
                 <th>Status</th>
                 <th></th>
@@ -56,10 +60,12 @@ export function WeekList({ employeeName, weeks, onSelectWeek, onBack }: Props) {
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => onSelectWeek(w)}
                 >
+                  <td className="mono font-medium">{w.weekNumber}</td>
                   <td className="font-medium">{w.weekLabel}</td>
                   <td className="mono">{w.totalHours.toFixed(1)}</td>
                   <td className="mono font-medium">€{w.totalSalary.toLocaleString()}</td>
                   <td className="mono text-success">€{w.paid.toLocaleString()}</td>
+                  <td className="mono">{w.paymentDate ? new Date(w.paymentDate + "T00:00:00").toLocaleDateString("nl-NL") : "-"}</td>
                   <td className="mono">
                     {w.remaining > 0 ? (
                       <span className="text-warning">€{w.remaining.toLocaleString()}</span>
