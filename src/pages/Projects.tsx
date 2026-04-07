@@ -329,7 +329,14 @@ export default function ProjectsPage() {
                         </span>
                       ) : "—"}
                     </td>
-                    <td className="mono">€{p.total_amount.toLocaleString()}</td>
+                    <td className="mono">
+                      <button
+                        onClick={() => window.location.href = `/projects/${p.id}/revenues`}
+                        className="underline hover:text-primary transition-colors"
+                      >
+                        €{p.total_amount.toLocaleString()}
+                      </button>
+                    </td>
                     <td className="mono">
                       <button
                         onClick={() => window.location.href = `/projects/${p.id}/expenses`}
@@ -389,10 +396,12 @@ export default function ProjectsPage() {
               <Label>{t("projects.totalAmount")}</Label>
               <Input type="number" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} placeholder="0" />
             </div>
-            <div className="space-y-2">
-              <Label>{t("projects.expenses")}</Label>
-              <Input type="number" value={formExpenses} onChange={(e) => setFormExpenses(e.target.value)} placeholder="0" />
-            </div>
+            {editing && (
+              <div className="space-y-2">
+                <Label>{t("projects.expenses")}</Label>
+                <Input type="number" value={formExpenses} onChange={(e) => setFormExpenses(e.target.value)} placeholder="0" />
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>{t("projects.startDate")} *</Label>
