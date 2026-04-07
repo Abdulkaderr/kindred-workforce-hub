@@ -210,7 +210,7 @@ export default function PayrollPage() {
       }
     }
 
-    toast({ title: "Payment Recorded", description: `$${amount.toLocaleString()} payment recorded.` });
+    toast({ title: "Payment Recorded", description: `€${amount.toLocaleString()} payment recorded.` });
     setModalOpen(false);
     fetchData();
   };
@@ -341,10 +341,10 @@ export default function PayrollPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatCard title="Total Payroll" value={`$${totalSalary.toLocaleString()}`} icon={DollarSign} variant="default" />
-        <StatCard title="Total Paid" value={`$${totalPaid.toLocaleString()}`} icon={CheckCircle} variant="success" />
-        <StatCard title="Remaining" value={`$${totalRemaining.toLocaleString()}`} icon={Clock} variant="warning" />
-        <StatCard title="Overdue" value={`$${overdue.toLocaleString()}`} icon={AlertTriangle} variant="default" />
+        <StatCard title="Total Payroll" value={`€${totalSalary.toLocaleString()}`} icon={DollarSign} variant="default" />
+        <StatCard title="Total Paid" value={`€${totalPaid.toLocaleString()}`} icon={CheckCircle} variant="success" />
+        <StatCard title="Remaining" value={`€${totalRemaining.toLocaleString()}`} icon={Clock} variant="warning" />
+        <StatCard title="Overdue" value={`€${overdue.toLocaleString()}`} icon={AlertTriangle} variant="default" />
       </div>
 
       <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
@@ -373,13 +373,13 @@ export default function PayrollPage() {
               {rows.map((r) => (
                 <tr key={r.user_id}>
                   <td className="font-medium">{r.name}</td>
-                  <td className="mono">${r.rate}/hr</td>
+                  <td className="mono">€{r.rate}/hr</td>
                   <td className="mono text-xs">{start} → {end}</td>
                   <td className="mono">{r.totalHours.toFixed(1)}</td>
-                  <td className="mono font-medium">${r.totalSalary.toLocaleString()}</td>
-                  <td className="mono text-success">${r.paid.toLocaleString()}</td>
+                  <td className="mono font-medium">€{r.totalSalary.toLocaleString()}</td>
+                  <td className="mono text-success">€{r.paid.toLocaleString()}</td>
                   <td className="mono">
-                    {r.remaining > 0 ? <span className="text-warning">${r.remaining.toLocaleString()}</span> : "$0"}
+                    {r.remaining > 0 ? <span className="text-warning">€{r.remaining.toLocaleString()}</span> : "€0"}
                   </td>
                   <td>
                     <span className={`status-badge ${r.status === "Paid" ? "status-completed" : r.status === "Partial" ? "status-pending" : "status-late"}`}>
@@ -425,7 +425,7 @@ export default function PayrollPage() {
               <div className="rounded-md bg-muted p-3 text-sm space-y-1">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Rate</span>
-                  <span className="font-medium">${selectedRow.rate}/hr</span>
+                  <span className="font-medium">€{selectedRow.rate}/hr</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Hours</span>
@@ -433,15 +433,15 @@ export default function PayrollPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Salary</span>
-                  <span className="font-medium">${selectedRow.totalSalary.toLocaleString()}</span>
+                  <span className="font-medium">€{selectedRow.totalSalary.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Already Paid</span>
-                  <span className="text-success font-medium">${selectedRow.paid.toLocaleString()}</span>
+                  <span className="text-success font-medium">€{selectedRow.paid.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Remaining</span>
-                  <span className="text-warning font-medium">${selectedRow.remaining.toLocaleString()}</span>
+                  <span className="text-warning font-medium">€{selectedRow.remaining.toLocaleString()}</span>
                 </div>
               </div>
               <div className="space-y-2">
