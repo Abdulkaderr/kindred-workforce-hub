@@ -43,6 +43,13 @@ function getWeekEnd(weekStart: string): string {
   return d.toISOString().split("T")[0];
 }
 
+function getWeekNumber(dateStr: string): number {
+  const d = new Date(dateStr + "T00:00:00");
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const days = Math.floor((d.getTime() - yearStart.getTime()) / 86400000);
+  return Math.ceil((days + yearStart.getDay() + 1) / 7);
+}
+
 function formatWeekLabel(start: string, end: string): string {
   const s = new Date(start + "T00:00:00");
   const e = new Date(end + "T00:00:00");
