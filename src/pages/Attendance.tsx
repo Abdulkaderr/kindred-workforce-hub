@@ -28,6 +28,7 @@ type Profile = {
   user_id: string;
   full_name: string | null;
   email: string | null;
+  hourly_rate: number;
 };
 
 const statusStyles: Record<string, string> = {
@@ -106,7 +107,7 @@ export default function AttendancePage() {
 
     const [recordsRes, profilesRes, projectsRes] = await Promise.all([
       query,
-      isAdmin ? supabase.from("profiles").select("user_id, full_name, email") : Promise.resolve({ data: [] }),
+      isAdmin ? supabase.from("profiles").select("user_id, full_name, email, hourly_rate") : supabase.from("profiles").select("user_id, full_name, email, hourly_rate").eq("user_id", user.id),
       supabase.from("projects").select("id, name, location"),
     ]);
 
@@ -169,6 +170,11 @@ export default function AttendancePage() {
   const getName = (userId: string) => {
     const p = profiles.find((p) => p.user_id === userId);
     return p?.full_name || p?.email?.split("@")[0] || userId.slice(0, 8) + "...";
+  };
+
+  const getRate = (userId: string) => {
+    const p = profiles.find((p) => p.user_id === userId);
+    return p?.hourly_rate || 0;
   };
 
   const employeeIds = useMemo(() => [...new Set(records.map((r) => r.user_id))], [records]);
@@ -356,6 +362,7 @@ export default function AttendancePage() {
                 <th>Check Out</th>
                 <th>Break</th>
                 <th>Total Hours</th>
+                <th>Total Salary</th>
                 <th>Status</th>
                 {isAdmin && <th>Actions</th>}
               </tr>
@@ -387,6 +394,7 @@ export default function AttendancePage() {
                     </td>
                     <td className="mono">{breakMins > 0 ? `${breakMins}m` : "—"}</td>
                     <td className="mono">{hours > 0 ? hours.toFixed(1) : "—"}</td>
+                    <td className="mono">{hours > 0 ? `€${(hours * getRate(r.user_id)).toFixed(2)}` : "—"}</td>
                     <td>
                       {isEditing ? (
                         <Select value={editStatus} onValueChange={setEditStatus}>
