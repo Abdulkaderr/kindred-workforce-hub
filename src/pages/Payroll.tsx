@@ -225,6 +225,7 @@ export default function PayrollPage() {
     const newPaid = selectedWeek.paid + amount;
     const newRemaining = Math.max(0, selectedWeek.totalSalary - newPaid);
     const newStatus = newRemaining <= 0 ? "paid" : "partial";
+    const today = new Date().toISOString().split("T")[0];
 
     if (selectedWeek.payrollId) {
       const { error } = await supabase
@@ -235,7 +236,8 @@ export default function PayrollPage() {
           total_hours: selectedWeek.totalHours,
           hourly_rate: selectedRate,
           total_salary: selectedWeek.totalSalary,
-        })
+          payment_date: today,
+        } as any)
         .eq("id", selectedWeek.payrollId);
       if (error) {
         toast({ title: "Betaling mislukt", description: error.message, variant: "destructive" });
@@ -252,7 +254,8 @@ export default function PayrollPage() {
         total_salary: selectedWeek.totalSalary,
         paid_amount: amount,
         status: newStatus,
-      });
+        payment_date: today,
+      } as any);
       if (error) {
         toast({ title: "Betaling mislukt", description: error.message, variant: "destructive" });
         return;
