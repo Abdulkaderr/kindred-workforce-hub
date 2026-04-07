@@ -305,7 +305,7 @@ export default function ProjectExpensesPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Invoice Reference *</Label>
-              <Input value={formInvoice} onChange={(e) => setFormInvoice(e.target.value)} placeholder="INV-001" />
+              <Input value={formInvoice} onChange={(e) => setFormInvoice(e.target.value)} placeholder="F" />
             </div>
             <div className="space-y-2">
               <Label>Amount (€) *</Label>
