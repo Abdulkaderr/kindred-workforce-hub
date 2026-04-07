@@ -47,13 +47,15 @@ export default function LoginPage() {
           title: t("login.accountCreated"),
           description: t("login.checkEmail"),
         });
+        setLoading(false);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        // Navigation handled by useEffect watching session
+        // Don't setLoading(false) here — navigation via useEffect will unmount this component
+        return;
       }
     } catch (error: any) {
       toast({
@@ -61,7 +63,6 @@ export default function LoginPage() {
         description: error.message,
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
