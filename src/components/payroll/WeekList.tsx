@@ -24,6 +24,10 @@ type Props = {
 };
 
 export function WeekList({ employeeName, weeks, onSelectWeek, onBack }: Props) {
+  const totalSalary = weeks.reduce((s, w) => s + w.totalSalary, 0);
+  const totalPaid = weeks.reduce((s, w) => s + w.paid, 0);
+  const totalRemaining = weeks.reduce((s, w) => s + w.remaining, 0);
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-4">
@@ -31,6 +35,21 @@ export function WeekList({ employeeName, weeks, onSelectWeek, onBack }: Props) {
           <ArrowLeft className="h-4 w-4 mr-1" /> Terug
         </Button>
         <h2 className="text-lg font-semibold">{employeeName} — Weken</h2>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
+        <div className="rounded-md border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Totaal Salaris</p>
+          <p className="text-xl font-semibold">€{totalSalary.toLocaleString()}</p>
+        </div>
+        <div className="rounded-md border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Betaald</p>
+          <p className="text-xl font-semibold text-success">€{totalPaid.toLocaleString()}</p>
+        </div>
+        <div className="rounded-md border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Resterend</p>
+          <p className={`text-xl font-semibold ${totalRemaining > 0 ? "text-warning" : "text-success"}`}>€{totalRemaining.toLocaleString()}</p>
+        </div>
       </div>
 
       {weeks.length === 0 ? (
