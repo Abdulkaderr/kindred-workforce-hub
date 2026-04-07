@@ -1,0 +1,1 @@
+ALTER TABLE public.attendance_records DROP CONSTRAINT IF EXISTS attendance_records_user_date_unique;
