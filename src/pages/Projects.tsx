@@ -168,7 +168,7 @@ export default function ProjectsPage() {
       toast({ title: t("projects.datesRequired"), variant: "destructive" });
       return;
     }
-    if (formStartDate >= formEndDate) {
+    if (formStartDate > formEndDate) {
       toast({ title: t("projects.invalidDates"), variant: "destructive" });
       return;
     }
@@ -396,12 +396,6 @@ export default function ProjectsPage() {
               <div className="space-y-2">
                 <Label>{t("projects.totalAmount")}</Label>
                 <Input type="number" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} placeholder="0" />
-              </div>
-            )}
-            {editing && (
-              <div className="space-y-2">
-                <Label>{t("projects.expenses")}</Label>
-                <Input type="number" value={formExpenses} onChange={(e) => setFormExpenses(e.target.value)} placeholder="0" />
               </div>
             )}
             <div className="grid grid-cols-2 gap-3">

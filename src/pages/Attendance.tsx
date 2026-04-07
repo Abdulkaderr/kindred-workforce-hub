@@ -41,7 +41,8 @@ const statusStyles: Record<string, string> = {
 
 function getPeriodRange(period: Period): { from: string; to: string } {
   const now = new Date();
-  const to = now.toISOString().split("T")[0];
+  const future = new Date(now); future.setFullYear(now.getFullYear() + 1);
+  const to = future.toISOString().split("T")[0];
   let from: Date;
   if (period === "weekly") {
     from = new Date(now); from.setDate(now.getDate() - 7);
