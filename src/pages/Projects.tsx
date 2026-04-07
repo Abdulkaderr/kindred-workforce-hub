@@ -345,7 +345,14 @@ export default function ProjectsPage() {
                         €{p.expenses.toLocaleString()}
                       </button>
                     </td>
-                    <td className="mono">€{Math.round(stats.wages).toLocaleString()}</td>
+                    <td className="mono">
+                      <button
+                        onClick={() => window.location.href = `/projects/${p.id}/wages`}
+                        className="underline hover:text-primary transition-colors"
+                      >
+                        €{Math.round(stats.wages).toLocaleString()}
+                      </button>
+                    </td>
                     <td className={`mono font-medium ${netProfit >= 0 ? "text-success" : "text-destructive"}`}>
                       €{Math.round(netProfit).toLocaleString()}
                     </td>

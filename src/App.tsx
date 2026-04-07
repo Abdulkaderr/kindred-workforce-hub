@@ -17,6 +17,7 @@ import Payroll from "./pages/Payroll";
 import Projects from "./pages/Projects";
 import ProjectExpenses from "./pages/ProjectExpenses";
 import ProjectRevenues from "./pages/ProjectRevenues";
+import ProjectWages from "./pages/ProjectWages";
 import CalendarNotes from "./pages/CalendarNotes";
 import Requests from "./pages/Requests";
 import Reports from "./pages/Reports";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
             <Route path="/projects/:projectId/expenses" element={<ProtectedRoute><ProjectExpenses /></ProtectedRoute>} />
             <Route path="/projects/:projectId/revenues" element={<ProtectedRoute><ProjectRevenues /></ProtectedRoute>} />
+            <Route path="/projects/:projectId/wages" element={<ProtectedRoute><ProjectWages /></ProtectedRoute>} />
             <Route path="/calendar" element={<ProtectedRoute><CalendarNotes /></ProtectedRoute>} />
             <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
