@@ -17,6 +17,7 @@ import Payroll from "./pages/Payroll";
 import Projects from "./pages/Projects";
 import ProjectExpenses from "./pages/ProjectExpenses";
 import ProjectRevenues from "./pages/ProjectRevenues";
+import ProjectWages from "./pages/ProjectWages";
 import CalendarNotes from "./pages/CalendarNotes";
 import Requests from "./pages/Requests";
 import Reports from "./pages/Reports";
