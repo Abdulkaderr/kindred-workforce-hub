@@ -250,6 +250,7 @@ export type Database = {
           hourly_rate: number
           id: string
           paid_amount: number
+          payment_date: string | null
           period_end: string
           period_start: string
           period_type: string
@@ -264,6 +265,7 @@ export type Database = {
           hourly_rate?: number
           id?: string
           paid_amount?: number
+          payment_date?: string | null
           period_end: string
           period_start: string
           period_type?: string
@@ -278,6 +280,7 @@ export type Database = {
           hourly_rate?: number
           id?: string
           paid_amount?: number
+          payment_date?: string | null
           period_end?: string
           period_start?: string
           period_type?: string

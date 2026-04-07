@@ -43,6 +43,13 @@ function getWeekEnd(weekStart: string): string {
   return d.toISOString().split("T")[0];
 }
 
+function getWeekNumber(dateStr: string): number {
+  const d = new Date(dateStr + "T00:00:00");
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const days = Math.floor((d.getTime() - yearStart.getTime()) / 86400000);
+  return Math.ceil((days + yearStart.getDay() + 1) / 7);
+}
+
 function formatWeekLabel(start: string, end: string): string {
   const s = new Date(start + "T00:00:00");
   const e = new Date(end + "T00:00:00");
@@ -170,12 +177,14 @@ export default function PayrollPage() {
         weekStart: ws,
         weekEnd: we,
         weekLabel: formatWeekLabel(ws, we),
+        weekNumber: getWeekNumber(ws),
         totalHours,
         totalSalary,
         paid,
         remaining,
         status,
         payrollId: payrollRec?.id || null,
+        paymentDate: payrollRec?.payment_date || null,
       });
     });
 
@@ -216,6 +225,7 @@ export default function PayrollPage() {
     const newPaid = selectedWeek.paid + amount;
     const newRemaining = Math.max(0, selectedWeek.totalSalary - newPaid);
     const newStatus = newRemaining <= 0 ? "paid" : "partial";
+    const today = new Date().toISOString().split("T")[0];
 
     if (selectedWeek.payrollId) {
       const { error } = await supabase
@@ -226,7 +236,8 @@ export default function PayrollPage() {
           total_hours: selectedWeek.totalHours,
           hourly_rate: selectedRate,
           total_salary: selectedWeek.totalSalary,
-        })
+          payment_date: today,
+        } as any)
         .eq("id", selectedWeek.payrollId);
       if (error) {
         toast({ title: "Betaling mislukt", description: error.message, variant: "destructive" });
@@ -243,7 +254,8 @@ export default function PayrollPage() {
         total_salary: selectedWeek.totalSalary,
         paid_amount: amount,
         status: newStatus,
-      });
+        payment_date: today,
+      } as any);
       if (error) {
         toast({ title: "Betaling mislukt", description: error.message, variant: "destructive" });
         return;

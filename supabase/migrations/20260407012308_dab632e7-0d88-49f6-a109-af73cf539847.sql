@@ -1,0 +1,1 @@
+ALTER TABLE public.payroll_records ADD COLUMN payment_date date;
