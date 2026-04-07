@@ -133,6 +133,7 @@ const nl = {
     checkOut: "Uitchecken",
     breakCol: "Pauze",
     totalHours: "Totaal uren",
+    totalSalary: "Totaal salaris",
     status: "Status",
     daysWorked: "Dagen gewerkt",
     totalBreak: "Totale pauze",

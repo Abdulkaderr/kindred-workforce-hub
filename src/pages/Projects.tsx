@@ -276,10 +276,10 @@ export default function ProjectsPage() {
 
       {isAdmin && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-          <StatCard title={t("projects.totalRevenue")} value={`$${totalRevenue.toLocaleString()}`} icon={FolderKanban} variant="accent" />
-          <StatCard title={t("projects.totalExpenses")} value={`$${totalExpenses.toLocaleString()}`} icon={FolderKanban} variant="warning" />
-          <StatCard title={t("projects.totalWages")} value={`$${Math.round(totalWages).toLocaleString()}`} icon={FolderKanban} variant="default" />
-          <StatCard title={t("projects.netProfit")} value={`$${Math.round(totalProfit).toLocaleString()}`} icon={FolderKanban} variant="success" />
+          <StatCard title={t("projects.totalRevenue")} value={`€${totalRevenue.toLocaleString()}`} icon={FolderKanban} variant="accent" />
+          <StatCard title={t("projects.totalExpenses")} value={`€${totalExpenses.toLocaleString()}`} icon={FolderKanban} variant="warning" />
+          <StatCard title={t("projects.totalWages")} value={`€${Math.round(totalWages).toLocaleString()}`} icon={FolderKanban} variant="default" />
+          <StatCard title={t("projects.netProfit")} value={`€${Math.round(totalProfit).toLocaleString()}`} icon={FolderKanban} variant="success" />
         </div>
       )}
 
@@ -329,11 +329,18 @@ export default function ProjectsPage() {
                         </span>
                       ) : "—"}
                     </td>
-                    <td className="mono">${p.total_amount.toLocaleString()}</td>
-                    <td className="mono">${p.expenses.toLocaleString()}</td>
-                    <td className="mono">${Math.round(stats.wages).toLocaleString()}</td>
+                    <td className="mono">€{p.total_amount.toLocaleString()}</td>
+                    <td className="mono">
+                      <button
+                        onClick={() => window.location.href = `/projects/${p.id}/expenses`}
+                        className="underline hover:text-primary transition-colors"
+                      >
+                        €{p.expenses.toLocaleString()}
+                      </button>
+                    </td>
+                    <td className="mono">€{Math.round(stats.wages).toLocaleString()}</td>
                     <td className={`mono font-medium ${netProfit >= 0 ? "text-success" : "text-destructive"}`}>
-                      ${Math.round(netProfit).toLocaleString()}
+                      €{Math.round(netProfit).toLocaleString()}
                     </td>
                     <td className="mono">{stats.hours.toFixed(1)}h</td>
                     <td>
