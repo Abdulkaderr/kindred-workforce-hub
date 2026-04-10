@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -54,7 +55,6 @@ function getPeriodRange(period: Period): { from: string; to: string } {
   return { from: from.toISOString().split("T")[0], to };
 }
 
-/** Validate that check-out is after check-in. Returns error message or null. */
 function validateTimes(checkIn: string, checkOut: string): string | null {
   if (!checkIn || !checkOut) return null;
   const inTime = new Date(checkIn).getTime();
@@ -73,7 +73,6 @@ export default function AttendancePage() {
   const [filterEmployee, setFilterEmployee] = useState("all");
   const [loading, setLoading] = useState(true);
 
-  // Add attendance state
   const [addOpen, setAddOpen] = useState(false);
   const [addUserId, setAddUserId] = useState("");
   const [addDate, setAddDate] = useState(new Date().toISOString().split("T")[0]);
@@ -84,11 +83,13 @@ export default function AttendancePage() {
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [allProjects, setAllProjects] = useState<{ id: string; name: string; location: string }[]>([]);
 
-  // Editing state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCheckIn, setEditCheckIn] = useState("");
   const [editCheckOut, setEditCheckOut] = useState("");
   const [editStatus, setEditStatus] = useState("");
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const fetchData = async () => {
     if (!user) return;
@@ -116,6 +117,7 @@ export default function AttendancePage() {
     setProfiles(profilesRes.data || []);
     if (isAdmin && profilesRes.data) setAllProfiles(profilesRes.data as Profile[]);
     if (projectsRes.data) setAllProjects(projectsRes.data as any[]);
+    setSelectedIds(new Set());
     setLoading(false);
   };
 
@@ -129,7 +131,6 @@ export default function AttendancePage() {
       return;
     }
 
-    // Validate times if both provided
     if (addCheckIn && addCheckOut) {
       const checkInISO = new Date(`${addDate}T${addCheckIn}`).toISOString();
       const checkOutISO = new Date(`${addDate}T${addCheckOut}`).toISOString();
@@ -207,7 +208,6 @@ export default function AttendancePage() {
   const cancelEdit = () => setEditingId(null);
 
   const saveEdit = async (recordId: string) => {
-    // Validate times
     if (editCheckIn && editCheckOut) {
       const timeError = validateTimes(new Date(editCheckIn).toISOString(), new Date(editCheckOut).toISOString());
       if (timeError) {
@@ -216,9 +216,7 @@ export default function AttendancePage() {
       }
     }
 
-    const update: any = {
-      status: editStatus,
-    };
+    const update: any = { status: editStatus };
     if (editCheckIn) update.check_in_time = new Date(editCheckIn).toISOString();
     else update.check_in_time = null;
     if (editCheckOut) update.check_out_time = new Date(editCheckOut).toISOString();
@@ -245,6 +243,39 @@ export default function AttendancePage() {
     }
   };
 
+  // Bulk delete
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((r) => r.id)));
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} selected records?`)) return;
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase.from("attendance_records").delete().in("id", ids);
+    if (error) {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `${ids.length} records deleted` });
+      fetchData();
+    }
+  };
+
+  const allSelected = filtered.length > 0 && selectedIds.size === filtered.length;
+
   return (
     <DashboardLayout>
       <div className="page-header flex-wrap gap-3">
@@ -255,6 +286,11 @@ export default function AttendancePage() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
+          {isAdmin && selectedIds.size > 0 && (
+            <Button size="sm" variant="destructive" onClick={bulkDelete}>
+              <Trash2 className="h-4 w-4 mr-1" /> Delete ({selectedIds.size})
+            </Button>
+          )}
           {isAdmin && (
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
               <DialogTrigger asChild>
@@ -356,6 +392,11 @@ export default function AttendancePage() {
           <table className="data-table">
             <thead>
               <tr>
+                {isAdmin && (
+                  <th className="w-10">
+                    <Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} />
+                  </th>
+                )}
                 {isAdmin && <th>Employee</th>}
                 <th>Date</th>
                 <th>Project Location</th>
@@ -376,6 +417,14 @@ export default function AttendancePage() {
 
                 return (
                   <tr key={r.id}>
+                    {isAdmin && (
+                      <td>
+                        <Checkbox
+                          checked={selectedIds.has(r.id)}
+                          onCheckedChange={() => toggleSelect(r.id)}
+                        />
+                      </td>
+                    )}
                     {isAdmin && <td className="font-medium">{getName(r.user_id)}</td>}
                     <td className="mono">{new Date(r.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
                     <td>{r.project_id ? (allProjects.find(p => p.id === r.project_id)?.location || "—") : "—"}</td>

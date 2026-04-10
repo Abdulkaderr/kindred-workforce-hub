@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
@@ -21,9 +21,10 @@ type Props = {
   weeks: WeekSummary[];
   onSelectWeek: (week: WeekSummary) => void;
   onBack: () => void;
+  onDeletePayment?: (payrollId: string) => void;
 };
 
-export function WeekList({ employeeName, weeks, onSelectWeek, onBack }: Props) {
+export function WeekList({ employeeName, weeks, onSelectWeek, onBack, onDeletePayment }: Props) {
   const totalSalary = weeks.reduce((s, w) => s + w.totalSalary, 0);
   const totalPaid = weeks.reduce((s, w) => s + w.paid, 0);
   const totalRemaining = weeks.reduce((s, w) => s + w.remaining, 0);
@@ -106,7 +107,22 @@ export function WeekList({ employeeName, weeks, onSelectWeek, onBack }: Props) {
                     </span>
                   </td>
                   <td>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex items-center gap-1">
+                      {onDeletePayment && w.payrollId && w.paid > 0 && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive h-7 w-7 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeletePayment(w.payrollId!);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
                   </td>
                 </tr>
               ))}

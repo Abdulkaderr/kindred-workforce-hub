@@ -74,6 +74,10 @@ export default function EmployeesPage() {
 
   const handleAddEmployee = async () => {
     if (!addEmail || !addPassword || !addName) return;
+    if (!addRate || Number(addRate) <= 0) {
+      toast({ title: t("employees.addFailed"), description: "Hourly rate is required and must be greater than 0.", variant: "destructive" });
+      return;
+    }
     setAddLoading(true);
     const { data: fnData, error: fnError } = await supabase.functions.invoke("admin-users", {
       body: { action: "create_user", email: addEmail, password: addPassword, full_name: addName, hourly_rate: Number(addRate) || 0 },
@@ -227,7 +231,7 @@ export default function EmployeesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>{t("cancel")}</Button>
-            <Button onClick={handleAddEmployee} disabled={addLoading || !addEmail || !addName || !addPassword}>
+            <Button onClick={handleAddEmployee} disabled={addLoading || !addEmail || !addName || !addPassword || !addRate || Number(addRate) <= 0}>
               {addLoading ? t("employees.adding") : t("employees.addEmployee")}
             </Button>
           </DialogFooter>

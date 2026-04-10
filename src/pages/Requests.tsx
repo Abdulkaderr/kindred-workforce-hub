@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
-import { FileWarning, Send } from "lucide-react";
+import { FileWarning, Send, Trash2 } from "lucide-react";
 
 type CorrectionRequest = {
   id: string;
@@ -46,6 +47,7 @@ export default function RequestsPage() {
   const [requests, setRequests] = useState<CorrectionRequest[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const fetchRequests = async () => {
     if (!user) return;
@@ -58,6 +60,7 @@ export default function RequestsPage() {
     ]);
     setRequests(reqRes.data || []);
     setProfiles(profRes.data || []);
+    setSelectedIds(new Set());
     setLoading(false);
   };
 
@@ -126,13 +129,52 @@ export default function RequestsPage() {
     }
   };
 
+  // Bulk selection
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === requests.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(requests.map((r) => r.id)));
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} selected requests?`)) return;
+    const ids = Array.from(selectedIds);
+    // Need delete policy - use edge function or direct delete
+    const { error } = await supabase.from("correction_requests").delete().in("id", ids);
+    if (error) {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `${ids.length} requests deleted` });
+      fetchRequests();
+    }
+  };
+
+  const allSelected = requests.length > 0 && selectedIds.size === requests.length;
+
   return (
     <DashboardLayout>
-      <div className="page-header">
+      <div className="page-header flex-wrap gap-3">
         <div>
           <h1 className="page-title">{isAdmin ? t("requests.title") : t("requests.myRequests")}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{isAdmin ? t("requests.subtitle") : t("requests.mySubtitle")}</p>
         </div>
+        {isAdmin && selectedIds.size > 0 && (
+          <Button size="sm" variant="destructive" onClick={bulkDelete}>
+            <Trash2 className="h-4 w-4 mr-1" /> Delete ({selectedIds.size})
+          </Button>
+        )}
       </div>
 
       {!isAdmin && (
@@ -177,6 +219,11 @@ export default function RequestsPage() {
           <table className="data-table">
             <thead>
               <tr>
+                {isAdmin && (
+                  <th className="w-10">
+                    <Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} />
+                  </th>
+                )}
                 {isAdmin && <th>{t("requests.employee")}</th>}
                 <th>{t("requests.type")}</th>
                 <th>{t("requests.date")}</th>
@@ -188,6 +235,14 @@ export default function RequestsPage() {
             <tbody>
               {requests.map((r) => (
                 <tr key={r.id}>
+                  {isAdmin && (
+                    <td>
+                      <Checkbox
+                        checked={selectedIds.has(r.id)}
+                        onCheckedChange={() => toggleSelect(r.id)}
+                      />
+                    </td>
+                  )}
                   {isAdmin && <td className="font-medium">{getName(r.user_id)}</td>}
                   <td>{r.request_type.replace(/_/g, " ")}</td>
                   <td className="mono">{r.request_date}</td>
