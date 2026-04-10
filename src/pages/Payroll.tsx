@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { StatCard } from "@/components/StatCard";
-import { DollarSign, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { DollarSign, CheckCircle, Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -27,11 +28,10 @@ type EmployeeSummary = {
 
 type View = "employees" | "weeks" | "details";
 
-/** Get Monday-based week start for a date */
 function getWeekStart(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(d);
   monday.setDate(diff);
   return monday.toISOString().split("T")[0];
@@ -43,11 +43,9 @@ function getWeekEnd(weekStart: string): string {
   return d.toISOString().split("T")[0];
 }
 
-/** ISO 8601 week number */
 function getWeekNumber(dateStr: string): number {
   const d = new Date(dateStr + "T00:00:00");
-  // Set to nearest Thursday: current date + 4 - current day number (Mon=1, Sun=7)
-  const dayNum = d.getDay() || 7; // Make Sunday = 7
+  const dayNum = d.getDay() || 7;
   d.setDate(d.getDate() + 4 - dayNum);
   const yearStart = new Date(d.getFullYear(), 0, 1);
   return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
@@ -60,38 +58,46 @@ function formatWeekLabel(start: string, end: string): string {
   return `${s.toLocaleDateString("nl-NL", opts)} — ${e.toLocaleDateString("nl-NL", opts)}`;
 }
 
+function getYearRange(year: number): { from: string; to: string } {
+  return { from: `${year}-01-01`, to: `${year}-12-31` };
+}
+
 export default function PayrollPage() {
   const { role, user } = useAuth();
   const isAdmin = role === "admin";
 
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [view, setView] = useState<View>("employees");
   const [loading, setLoading] = useState(true);
 
-  // Data
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [allAttendance, setAllAttendance] = useState<any[]>([]);
   const [allPayroll, setAllPayroll] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
 
-  // Selection state
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<WeekSummary | null>(null);
+
+  // Generate year options (current year + 5 years back)
+  const yearOptions = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    const { from, to } = getYearRange(selectedYear);
 
     const profileQuery = isAdmin
       ? supabase.from("profiles").select("user_id, full_name, email, hourly_rate")
       : supabase.from("profiles").select("user_id, full_name, email, hourly_rate").eq("user_id", user.id);
 
     const attendanceQuery = isAdmin
-      ? supabase.from("attendance_records").select("*")
-      : supabase.from("attendance_records").select("*").eq("user_id", user.id);
+      ? supabase.from("attendance_records").select("*").gte("date", from).lte("date", to)
+      : supabase.from("attendance_records").select("*").eq("user_id", user.id).gte("date", from).lte("date", to);
 
     const payrollQuery = isAdmin
-      ? supabase.from("payroll_records").select("*")
-      : supabase.from("payroll_records").select("*").eq("user_id", user.id);
+      ? supabase.from("payroll_records").select("*").gte("period_start", from).lte("period_end", to)
+      : supabase.from("payroll_records").select("*").eq("user_id", user.id).gte("period_start", from).lte("period_end", to);
 
     const [pRes, aRes, prRes, projRes] = await Promise.all([
       profileQuery,
@@ -105,20 +111,18 @@ export default function PayrollPage() {
     setAllPayroll(prRes.data || []);
     setProjects(projRes.data || []);
     setLoading(false);
-  }, [user, isAdmin]);
+  }, [user, isAdmin, selectedYear]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Helper: calc hours from a record
   const calcHours = (r: any): number => {
     if (!r.check_in_time || !r.check_out_time) return 0;
     const diff = new Date(r.check_out_time).getTime() - new Date(r.check_in_time).getTime();
     return Math.max(0, (diff - (r.break_duration_ms || 0)) / 3600000);
   };
 
-  // Build employee summaries
   const employeeSummaries: EmployeeSummary[] = profiles.map((p) => {
     const records = allAttendance.filter((a: any) => a.user_id === p.user_id);
     const totalHours = Math.round(records.reduce((s: number, r: any) => s + calcHours(r), 0) * 10) / 10;
@@ -139,17 +143,14 @@ export default function PayrollPage() {
     };
   });
 
-  // Stats
   const totalSalary = employeeSummaries.reduce((s, e) => s + e.totalSalary, 0);
   const totalPaid = employeeSummaries.reduce((s, e) => s + e.totalPaid, 0);
   const totalRemaining = employeeSummaries.reduce((s, e) => s + e.remaining, 0);
 
-  // Selected profile
   const selectedProfile = profiles.find((p) => p.user_id === selectedUserId);
   const selectedName = selectedProfile?.full_name || selectedProfile?.email?.split("@")[0] || "";
   const selectedRate = Number(selectedProfile?.hourly_rate) || 0;
 
-  // Build weeks for selected employee
   const buildWeeks = (): WeekSummary[] => {
     if (!selectedUserId) return [];
     const records = allAttendance.filter((a: any) => a.user_id === selectedUserId);
@@ -167,7 +168,6 @@ export default function PayrollPage() {
       const totalHours = Math.round(recs.reduce((s: number, r: any) => s + calcHours(r), 0) * 10) / 10;
       const totalSalary = Math.round(totalHours * selectedRate * 100) / 100;
 
-      // Find payroll record for this week
       const payrollRec = allPayroll.find(
         (pr: any) => pr.user_id === selectedUserId && pr.period_start === ws && pr.period_end === we
       );
@@ -195,7 +195,6 @@ export default function PayrollPage() {
     return weeks;
   };
 
-  // Build day details for selected week
   const buildDays = (): DayDetail[] => {
     if (!selectedUserId || !selectedWeek) return [];
     const records = allAttendance
@@ -222,7 +221,6 @@ export default function PayrollPage() {
     });
   };
 
-  // Handle payment
   const handlePayment = async (amount: number) => {
     if (!selectedUserId || !selectedWeek) return;
     const newPaid = selectedWeek.paid + amount;
@@ -267,13 +265,28 @@ export default function PayrollPage() {
 
     toast({ title: "Betaling vastgelegd", description: `€${amount.toLocaleString()} betaald.` });
     await fetchData();
-    // Update selected week with fresh data
     const freshWeeks = buildWeeks();
     const updated = freshWeeks.find((w) => w.weekStart === selectedWeek.weekStart);
     if (updated) setSelectedWeek(updated);
   };
 
-  // Navigation
+  const handleDeletePayment = async (payrollId: string) => {
+    if (!confirm("Weet je zeker dat je deze betaling wilt verwijderen?")) return;
+    const { error } = await supabase.from("payroll_records").delete().eq("id", payrollId);
+    if (error) {
+      toast({ title: "Verwijderen mislukt", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Betaling verwijderd" });
+    await fetchData();
+    if (selectedWeek) {
+      const freshWeeks = buildWeeks();
+      const updated = freshWeeks.find((w) => w.weekStart === selectedWeek.weekStart);
+      if (updated) setSelectedWeek(updated);
+      else setSelectedWeek(null);
+    }
+  };
+
   const selectEmployee = (userId: string) => {
     setSelectedUserId(userId);
     setSelectedWeek(null);
@@ -295,7 +308,6 @@ export default function PayrollPage() {
     setView("weeks");
   };
 
-  // For non-admin, auto-select self
   useEffect(() => {
     if (!isAdmin && user && profiles.length > 0) {
       setSelectedUserId(user.id);
@@ -306,7 +318,6 @@ export default function PayrollPage() {
   const weeks = view !== "employees" ? buildWeeks() : [];
   const days = view === "details" ? buildDays() : [];
 
-  // Recalc selected week from fresh data after fetchData
   useEffect(() => {
     if (selectedWeek && selectedUserId) {
       const freshWeeks = buildWeeks();
@@ -323,6 +334,16 @@ export default function PayrollPage() {
           <p className="text-sm text-muted-foreground mt-0.5">
             Beheer betalingen per medewerker en per week
           </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+            <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {yearOptions.map((y) => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -348,6 +369,7 @@ export default function PayrollPage() {
           weeks={weeks}
           onSelectWeek={selectWeek}
           onBack={backToEmployees}
+          onDeletePayment={isAdmin ? handleDeletePayment : undefined}
         />
       )}
 
