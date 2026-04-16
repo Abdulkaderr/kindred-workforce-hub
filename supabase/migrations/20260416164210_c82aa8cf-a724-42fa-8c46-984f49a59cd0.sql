@@ -1,0 +1,1 @@
+GRANT UPDATE (hourly_rate) ON public.profiles TO authenticated;
